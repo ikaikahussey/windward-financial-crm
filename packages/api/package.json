@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "npm run db:migrate && node dist/index.js",
+    "start": "npm run db:migrate && tsx src/index.ts",
     "build": "tsc",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
