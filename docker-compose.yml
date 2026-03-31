@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: windward
+      POSTGRES_PASSWORD: windward
+      POSTGRES_DB: windward_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U windward -d windward_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://windward:windward@postgres:5432/windward_crm
+      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-in-production}
+      PORT: "3001"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-contact@windwardfinancial.net}
+      SCHEDULING_LINK: ${SCHEDULING_LINK:-https://windward.financial/schedule-an-appointment}
+      QUO_API_KEY: ${QUO_API_KEY:-}
+      QUO_WEBHOOK_BASE_URL: ${QUO_WEBHOOK_BASE_URL:-http://localhost:3001}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:80}
+      ADMIN_URL: ${ADMIN_URL:-http://localhost:8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  public:
+    build:
+      context: .
+      dockerfile: packages/public/Dockerfile
+    ports:
+      - "5174:80"
+    depends_on:
+      - api
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - api
+      - web
+      - public
+
+volumes:
+  pgdata:

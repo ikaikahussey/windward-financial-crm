@@ -1,0 +1,16 @@
+{
+  "name": "windward-crm",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "docker compose up",
+    "dev:api": "cd packages/api && npm run dev",
+    "dev:web": "cd packages/web && npm run dev",
+    "dev:public": "cd packages/public && npm run dev",
+    "build": "npm run build --workspaces",
+    "db:migrate": "cd packages/api && npm run db:migrate",
+    "db:seed": "cd packages/api && npm run db:seed"
+  }
+}
