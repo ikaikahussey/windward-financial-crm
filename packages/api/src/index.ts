@@ -23,6 +23,9 @@ import publicRoutes from './routes/public';
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
 
+// Trust Railway's reverse proxy (needed for secure cookies)
+app.set('trust proxy', 1);
+
 // CORS
 app.use(cors({
   origin: [process.env.PUBLIC_URL, process.env.ADMIN_URL].filter(Boolean) as string[],
