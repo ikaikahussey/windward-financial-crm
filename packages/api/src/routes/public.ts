@@ -362,8 +362,8 @@ router.post('/schedule', async (req: Request, res: Response) => {
   try {
     const {
       firstName, lastName, email, phone,
-      employmentType, employerSchool,
-      preferredDate, preferredTime, notes,
+      employmentType, employerSchool, employer,
+      preferredDate, preferredTime, consultationType, message, notes,
     } = req.body;
 
     if (!firstName || !lastName || !email) {
@@ -372,9 +372,10 @@ router.post('/schedule', async (req: Request, res: Response) => {
 
     const scheduleNotes = [
       'Appointment request from website',
+      consultationType ? `Consultation type: ${consultationType}` : null,
       preferredDate ? `Preferred date: ${preferredDate}` : null,
       preferredTime ? `Preferred time: ${preferredTime}` : null,
-      notes ? `Notes: ${notes}` : null,
+      (message || notes) ? `Notes: ${message || notes}` : null,
     ].filter(Boolean).join('\n');
 
     const lead = await createOrUpdateLead({
@@ -383,14 +384,20 @@ router.post('/schedule', async (req: Request, res: Response) => {
       email,
       phone,
       employmentType,
-      employerSchool,
+      employerSchool: employerSchool || employer,
       leadSource: 'Website',
       notes: scheduleNotes,
     });
 
     // Create appointment if dates provided
     if (preferredDate) {
-      const startTime = new Date(`${preferredDate}${preferredTime ? 'T' + preferredTime : 'T09:00:00'}`);
+      const timeMap: Record<string, string> = {
+        morning: '09:00:00',
+        afternoon: '13:00:00',
+        evening: '17:00:00',
+      };
+      const timeStr = timeMap[(preferredTime || '').toLowerCase()] || preferredTime || '09:00:00';
+      const startTime = new Date(`${preferredDate}T${timeStr}`);
       const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour
 
       await db.insert(appointments).values({
