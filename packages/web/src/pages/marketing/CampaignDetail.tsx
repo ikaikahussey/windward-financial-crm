@@ -2,52 +2,65 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Play, Pause, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Plus, Edit2, Trash2, X, Eye, Send, CheckCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Campaign {
-  id: string;
+  id: number;
   name: string;
   type: string;
   status: string;
   subject: string;
-  from_name: string;
-  created_at: string;
+  fromName: string;
+  createdAt: string;
+  steps?: Step[];
+  enrollmentCount?: number;
 }
 
 interface Step {
-  id: string;
-  step_number: number;
-  delay_days: number;
+  id: number;
+  stepNumber: number;
+  delayDays: number;
   subject: string;
   body: string;
   type: string;
 }
 
-interface Enrollment {
-  id: string;
-  district_id: string;
-  district_name: string;
-  contact_name: string;
-  contact_email: string;
-  current_step: number;
-  status: string;
-  enrolled_at: string;
+interface EnrollmentRow {
+  enrollment: {
+    id: number;
+    districtId: number;
+    districtContactId: number | null;
+    currentStep: number;
+    status: string;
+    enrolledAt: string;
+  };
+  district: {
+    id: number;
+    employerName: string;
+    city: string;
+    state: string;
+  };
+  contact: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    title: string;
+  } | null;
 }
 
 interface Metrics {
-  total_enrolled: number;
-  emails_sent: number;
+  totalEnrollments: number;
+  activeEnrollments: number;
+  completedEnrollments: number;
+  sent: number;
   opened: number;
   clicked: number;
   replied: number;
   bounced: number;
-}
-
-interface DistrictOption {
-  id: string;
-  name: string;
-  contact_name: string;
+  openRate: string;
+  clickRate: string;
+  replyRate: string;
 }
 
 type Tab = 'overview' | 'steps' | 'enrollments' | 'metrics';
@@ -68,8 +81,11 @@ export default function MarketingCampaignDetail() {
 
   function loadCampaign() {
     if (!id) return;
-    api.get<{ campaign: Campaign }>(`/api/marketing/campaigns/${id}`)
-      .then((d) => setCampaign(d.campaign))
+    api.get<any>(`/api/marketing/campaigns/${id}`)
+      .then((d) => {
+        // API returns the campaign fields directly with steps and enrollmentCount
+        setCampaign(d);
+      })
       .catch(() => setCampaign(null))
       .finally(() => setLoading(false));
   }
@@ -86,8 +102,8 @@ export default function MarketingCampaignDetail() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
-    { key: 'steps', label: 'Steps' },
-    { key: 'enrollments', label: 'Enrollments' },
+    { key: 'steps', label: `Email Preview (${campaign.steps?.length || 0})` },
+    { key: 'enrollments', label: `Recipients (${campaign.enrollmentCount || 0})` },
     { key: 'metrics', label: 'Metrics' },
   ];
 
@@ -110,6 +126,19 @@ export default function MarketingCampaignDetail() {
           </div>
         </div>
       </div>
+
+      {/* Draft approval banner */}
+      {campaign.status === 'draft' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800">Campaign is in Draft mode</p>
+            <p className="text-sm text-amber-700 mt-1">
+              Review each email step below, edit if needed, then click <strong>"Approve &amp; Launch"</strong> when ready. No emails will be sent until you approve.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -134,7 +163,7 @@ export default function MarketingCampaignDetail() {
       {activeTab === 'overview' && (
         <OverviewTab campaign={campaign} onUpdated={loadCampaign} />
       )}
-      {activeTab === 'steps' && <StepsTab campaignId={id!} />}
+      {activeTab === 'steps' && <StepsTab campaignId={id!} campaign={campaign} onUpdated={loadCampaign} />}
       {activeTab === 'enrollments' && <EnrollmentsTab campaignId={id!} />}
       {activeTab === 'metrics' && <MetricsTab campaignId={id!} />}
     </div>
@@ -148,12 +177,13 @@ function OverviewTab({ campaign, onUpdated }: { campaign: Campaign; onUpdated: (
     name: campaign.name,
     type: campaign.type,
     subject: campaign.subject || '',
-    from_name: campaign.from_name || '',
+    fromName: campaign.fromName || '',
   });
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   async function handleLaunch() {
+    if (!confirm('You are about to launch this campaign. Emails will start sending to all enrolled districts.\n\nAre you sure?')) return;
     setActionLoading(true);
     try {
       await api.post(`/api/marketing/campaigns/${campaign.id}/launch`);
@@ -199,9 +229,9 @@ function OverviewTab({ campaign, onUpdated }: { campaign: Campaign; onUpdated: (
           <button
             onClick={handleLaunch}
             disabled={actionLoading}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium disabled:opacity-50"
+            className="flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-lg hover:bg-green-700 transition text-sm font-semibold disabled:opacity-50 shadow-sm"
           >
-            <Play className="h-4 w-4" /> Launch Campaign
+            <Send className="h-4 w-4" /> Approve &amp; Launch Campaign
           </button>
         )}
         {campaign.status === 'active' && (
@@ -212,6 +242,11 @@ function OverviewTab({ campaign, onUpdated }: { campaign: Campaign; onUpdated: (
           >
             <Pause className="h-4 w-4" /> Pause Campaign
           </button>
+        )}
+        {campaign.status === 'active' && (
+          <span className="flex items-center gap-1.5 text-sm text-green-700">
+            <CheckCircle className="h-4 w-4" /> Campaign is live — emails are being sent
+          </span>
         )}
         {!editing && campaign.status !== 'completed' && (
           <button
@@ -229,39 +264,18 @@ function OverviewTab({ campaign, onUpdated }: { campaign: Campaign; onUpdated: (
           <form onSubmit={handleSave} className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="email">Email</option>
-                <option value="webinar">Webinar</option>
-                <option value="pdf">PDF</option>
-              </select>
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-              <input
-                value={form.subject}
-                onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">From Name</label>
-              <input
-                value={form.from_name}
-                onChange={(e) => setForm({ ...form, from_name: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <input value={form.fromName} onChange={(e) => setForm({ ...form, fromName: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-600">Cancel</button>
@@ -276,8 +290,10 @@ function OverviewTab({ campaign, onUpdated }: { campaign: Campaign; onUpdated: (
             <div><span className="text-gray-500">Type:</span> <span className="font-medium capitalize">{campaign.type}</span></div>
             <div><span className="text-gray-500">Status:</span> <span className="font-medium capitalize">{campaign.status}</span></div>
             <div><span className="text-gray-500">Subject:</span> <span className="font-medium">{campaign.subject || '-'}</span></div>
-            <div><span className="text-gray-500">From Name:</span> <span className="font-medium">{campaign.from_name || '-'}</span></div>
-            <div><span className="text-gray-500">Created:</span> <span className="font-medium">{campaign.created_at ? format(new Date(campaign.created_at), 'MMM d, yyyy') : '-'}</span></div>
+            <div><span className="text-gray-500">From Name:</span> <span className="font-medium">{campaign.fromName || '-'}</span></div>
+            <div><span className="text-gray-500">Created:</span> <span className="font-medium">{campaign.createdAt ? format(new Date(campaign.createdAt), 'MMM d, yyyy') : '-'}</span></div>
+            <div><span className="text-gray-500">Email Steps:</span> <span className="font-medium">{campaign.steps?.length || 0}</span></div>
+            <div><span className="text-gray-500">Districts Enrolled:</span> <span className="font-medium">{campaign.enrollmentCount || 0}</span></div>
           </div>
         )}
       </div>
@@ -285,15 +301,17 @@ function OverviewTab({ campaign, onUpdated }: { campaign: Campaign; onUpdated: (
   );
 }
 
-/* ===================== STEPS TAB ===================== */
-function StepsTab({ campaignId }: { campaignId: string }) {
+/* ===================== STEPS TAB (with email preview) ===================== */
+function StepsTab({ campaignId, campaign, onUpdated }: { campaignId: string; campaign: Campaign; onUpdated: () => void }) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
+  const [previewStep, setPreviewStep] = useState<Step | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   function loadSteps() {
-    api.get<{ steps: Step[] }>(`/api/marketing/campaigns/${campaignId}`)
+    api.get<any>(`/api/marketing/campaigns/${campaignId}`)
       .then((d) => setSteps(d.steps || []))
       .catch(() => setSteps([]))
       .finally(() => setLoading(false));
@@ -301,17 +319,57 @@ function StepsTab({ campaignId }: { campaignId: string }) {
 
   useEffect(() => { loadSteps(); }, [campaignId]);
 
+  async function handleApproveAndLaunch() {
+    if (!confirm('You have reviewed all email steps.\n\nLaunch this campaign now? Emails will begin sending to all enrolled districts.')) return;
+    setActionLoading(true);
+    try {
+      await api.post(`/api/marketing/campaigns/${campaignId}/launch`);
+      onUpdated();
+    } catch {
+      alert('Failed to launch campaign');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // Fill in sample merge tags for preview
+  function renderPreview(html: string): string {
+    return html
+      .replace(/\{\{district_name\}\}/g, 'Castle High School Complex')
+      .replace(/\{\{first_name\}\}/g, 'Castle')
+      .replace(/\{\{last_name\}\}/g, 'CAS Office')
+      .replace(/\{\{title\}\}/g, 'Complex Area Superintendent')
+      .replace(/\{\{city\}\}/g, 'Kaneohe')
+      .replace(/\{\{state\}\}/g, 'HI');
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-primary-dark">Campaign Steps</h2>
-        <button
-          onClick={() => { setEditingStep(null); setShowAdd(true); }}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
-        >
-          <Plus className="h-4 w-4" /> Add Step
-        </button>
+        <h2 className="text-lg font-semibold text-primary-dark">Email Sequence</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setEditingStep(null); setShowAdd(true); }}
+            className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition text-sm font-medium"
+          >
+            <Plus className="h-4 w-4" /> Add Step
+          </button>
+          {campaign.status === 'draft' && steps.length > 0 && (
+            <button
+              onClick={handleApproveAndLaunch}
+              disabled={actionLoading}
+              className="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition text-sm font-semibold disabled:opacity-50 shadow-sm"
+            >
+              <Send className="h-4 w-4" />
+              {actionLoading ? 'Launching...' : 'Approve & Launch'}
+            </button>
+          )}
+        </div>
       </div>
+
+      <p className="text-sm text-gray-500">
+        Review each email below. Click <strong>Preview</strong> to see the full rendered email, or <strong>Edit</strong> to modify the content. When satisfied, click <strong>Approve &amp; Launch</strong>.
+      </p>
 
       {loading ? (
         <div className="p-8 text-center text-gray-400">Loading steps...</div>
@@ -320,33 +378,31 @@ function StepsTab({ campaignId }: { campaignId: string }) {
           No steps yet. Add your first step to define the campaign sequence.
         </div>
       ) : (
-        <div className="space-y-3">
-          {steps.sort((a, b) => a.step_number - b.step_number).map((step) => (
-            <div key={step.id} className="bg-white rounded-xl shadow-sm border border-sand-dark p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded">
-                      Step {step.step_number}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      Delay: {step.delay_days} day{step.delay_days !== 1 ? 's' : ''}
-                    </span>
-                    <span className="text-xs text-gray-400 capitalize">
-                      ({step.type || 'email'})
-                    </span>
-                  </div>
-                  <p className="font-medium text-primary-dark">{step.subject}</p>
-                  {step.body && (
-                    <p className="text-xs text-gray-500 mt-1 truncate max-w-xl">{step.body.replace(/<[^>]*>/g, '').slice(0, 150)}</p>
-                  )}
+        <div className="space-y-4">
+          {steps.sort((a, b) => a.stepNumber - b.stepNumber).map((step) => (
+            <div key={step.id} className="bg-white rounded-xl shadow-sm border border-sand-dark overflow-hidden">
+              {/* Step header */}
+              <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-sand-dark">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold bg-primary text-white px-2.5 py-1 rounded-full">
+                    Step {step.stepNumber}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {step.delayDays === 0 ? 'Sent immediately' : `Sent ${step.delayDays} day${step.delayDays !== 1 ? 's' : ''} after previous`}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPreviewStep(step)}
+                    className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition font-medium"
+                  >
+                    <Eye className="h-3 w-3" /> Preview
+                  </button>
                   <button
                     onClick={() => { setEditingStep(step); setShowAdd(true); }}
-                    className="text-gray-400 hover:text-primary"
+                    className="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition font-medium"
                   >
-                    <Edit2 className="h-4 w-4" />
+                    <Edit2 className="h-3 w-3" /> Edit
                   </button>
                   <button
                     onClick={async () => {
@@ -354,14 +410,72 @@ function StepsTab({ campaignId }: { campaignId: string }) {
                       await api.delete(`/api/marketing/campaigns/${campaignId}/steps/${step.id}`);
                       loadSteps();
                     }}
-                    className="text-gray-400 hover:text-coral"
+                    className="text-gray-400 hover:text-red-500 p-1"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
+                </div>
+              </div>
+
+              {/* Subject line */}
+              <div className="px-5 py-2 border-b border-sand-dark/50 bg-white">
+                <span className="text-xs text-gray-400">Subject: </span>
+                <span className="text-sm font-medium text-gray-800">
+                  {renderPreview(step.subject)}
+                </span>
+              </div>
+
+              {/* Email body preview (rendered HTML, max height) */}
+              <div className="p-4">
+                <div
+                  className="border border-gray-100 rounded-lg overflow-hidden max-h-[300px] overflow-y-auto"
+                  style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '117.6%' }}
+                >
+                  <div dangerouslySetInnerHTML={{ __html: renderPreview(step.body) }} />
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Full-screen email preview modal */}
+      {previewStep && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setPreviewStep(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div>
+                <span className="text-xs font-bold bg-primary text-white px-2.5 py-1 rounded-full mr-2">
+                  Step {previewStep.stepNumber}
+                </span>
+                <span className="text-sm text-gray-500">Email Preview</span>
+              </div>
+              <button onClick={() => setPreviewStep(null)}>
+                <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-sm">
+              <div><span className="text-gray-400">From:</span> <span className="font-medium">Windward Financial Group &lt;info@windward.financial&gt;</span></div>
+              <div><span className="text-gray-400">Subject:</span> <span className="font-medium">{renderPreview(previewStep.subject)}</span></div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div dangerouslySetInnerHTML={{ __html: renderPreview(previewStep.body) }} />
+            </div>
+            <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+              <button
+                onClick={() => { setPreviewStep(null); setEditingStep(previewStep); setShowAdd(true); }}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary"
+              >
+                <Edit2 className="h-4 w-4" /> Edit This Email
+              </button>
+              <button
+                onClick={() => setPreviewStep(null)}
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark"
+              >
+                Looks Good
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -379,35 +493,30 @@ function StepsTab({ campaignId }: { campaignId: string }) {
 }
 
 function StepEditor({
-  campaignId,
-  step,
-  stepCount,
-  onClose,
-  onSaved,
+  campaignId, step, stepCount, onClose, onSaved,
 }: {
-  campaignId: string;
-  step: Step | null;
-  stepCount: number;
-  onClose: () => void;
-  onSaved: () => void;
+  campaignId: string; step: Step | null; stepCount: number; onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    step_number: step?.step_number?.toString() || String(stepCount + 1),
-    delay_days: step?.delay_days?.toString() || '0',
+    stepNumber: step?.stepNumber?.toString() || String(stepCount + 1),
+    delayDays: step?.delayDays?.toString() || '0',
     subject: step?.subject || '',
     body: step?.body || '',
     type: step?.type || 'email',
   });
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
       const payload = {
-        ...form,
-        step_number: parseInt(form.step_number),
-        delay_days: parseInt(form.delay_days),
+        stepNumber: parseInt(form.stepNumber),
+        delayDays: parseInt(form.delayDays),
+        subject: form.subject,
+        body: form.body,
+        type: form.type,
       };
       if (step) {
         await api.patch(`/api/marketing/campaigns/${campaignId}/steps/${step.id}`, payload);
@@ -424,42 +533,29 @@ function StepEditor({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-primary-dark">{step ? 'Edit' : 'Add'} Step</h2>
+          <h2 className="text-lg font-bold text-primary-dark">{step ? 'Edit' : 'Add'} Email Step</h2>
           <button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Step #</label>
-              <input
-                type="number"
-                required
-                min="1"
-                value={form.step_number}
-                onChange={(e) => setForm({ ...form, step_number: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <input type="number" required min="1" value={form.stepNumber}
+                onChange={(e) => setForm({ ...form, stepNumber: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Delay (days)</label>
-              <input
-                type="number"
-                required
-                min="0"
-                value={form.delay_days}
-                onChange={(e) => setForm({ ...form, delay_days: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <input type="number" required min="0" value={form.delayDays}
+                onChange={(e) => setForm({ ...form, delayDays: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
                 <option value="email">Email</option>
                 <option value="sms">SMS</option>
               </select>
@@ -467,21 +563,33 @@ function StepEditor({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-            <input
-              required
-              value={form.subject}
-              onChange={(e) => setForm({ ...form, subject: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
+            <input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <p className="text-xs text-gray-400 mt-1">Merge tags: {'{{district_name}}'}, {'{{first_name}}'}, {'{{last_name}}'}, {'{{title}}'}, {'{{city}}'}, {'{{state}}'}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Body (HTML)</label>
-            <textarea
-              value={form.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
-              rows={8}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">Body (HTML)</label>
+              <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs text-primary hover:underline">
+                {showPreview ? 'Show Code' : 'Show Preview'}
+              </button>
+            </div>
+            {showPreview ? (
+              <div className="border border-gray-200 rounded-lg p-4 min-h-[200px] max-h-[400px] overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: form.body
+                  .replace(/\{\{district_name\}\}/g, 'Castle High School Complex')
+                  .replace(/\{\{first_name\}\}/g, 'Castle')
+                  .replace(/\{\{last_name\}\}/g, 'CAS Office')
+                  .replace(/\{\{title\}\}/g, 'Complex Area Superintendent')
+                  .replace(/\{\{city\}\}/g, 'Kaneohe')
+                  .replace(/\{\{state\}\}/g, 'HI')
+                }} />
+              </div>
+            ) : (
+              <textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })}
+                rows={12}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono" />
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600">Cancel</button>
@@ -497,20 +605,23 @@ function StepEditor({
 
 /* ===================== ENROLLMENTS TAB ===================== */
 function EnrollmentsTab({ campaignId }: { campaignId: string }) {
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showEnroll, setShowEnroll] = useState(false);
 
   function loadEnrollments() {
-    api.get<{ enrollments: Enrollment[] }>(`/api/marketing/campaigns/${campaignId}/enrollments`)
-      .then((d) => setEnrollments(d.enrollments || []))
+    api.get<any>(`/api/marketing/campaigns/${campaignId}/enrollments`)
+      .then((d) => {
+        // API returns array of { enrollment, district, contact }
+        const rows = Array.isArray(d) ? d : (d.enrollments || d.data || []);
+        setEnrollments(rows);
+      })
       .catch(() => setEnrollments([]))
       .finally(() => setLoading(false));
   }
 
   useEffect(() => { loadEnrollments(); }, [campaignId]);
 
-  const enrollmentStatusStyles: Record<string, string> = {
+  const statusStyles: Record<string, string> = {
     pending: 'bg-gray-100 text-gray-600',
     active: 'bg-green-100 text-green-700',
     completed: 'bg-blue-100 text-blue-700',
@@ -519,13 +630,7 @@ function EnrollmentsTab({ campaignId }: { campaignId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-primary-dark">Enrollments</h2>
-        <button
-          onClick={() => setShowEnroll(true)}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
-        >
-          <Plus className="h-4 w-4" /> Enroll Districts
-        </button>
+        <h2 className="text-lg font-semibold text-primary-dark">Enrolled Districts ({enrollments.length})</h2>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-sand-dark overflow-hidden">
@@ -540,149 +645,29 @@ function EnrollmentsTab({ campaignId }: { campaignId: string }) {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">District</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Contact</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Email</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Current Step</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Step</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Enrolled</th>
               </tr>
             </thead>
             <tbody>
-              {enrollments.map((e) => (
-                <tr key={e.id} className="border-b border-sand-dark/50 hover:bg-sand/30">
-                  <td className="px-4 py-3 font-medium text-primary-dark">{e.district_name}</td>
-                  <td className="px-4 py-3 text-gray-600">{e.contact_name || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{e.contact_email || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">Step {e.current_step || 1}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', enrollmentStatusStyles[e.status] || 'bg-gray-100 text-gray-500')}>
-                      {e.status}
-                    </span>
+              {enrollments.map((row) => (
+                <tr key={row.enrollment.id} className="border-b border-sand-dark/50 hover:bg-sand/30">
+                  <td className="px-4 py-3 font-medium text-primary-dark">{row.district?.employerName || '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {row.contact ? `${row.contact.firstName} ${row.contact.lastName}` : '-'}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {e.enrolled_at ? format(new Date(e.enrolled_at), 'MMM d, yyyy') : '-'}
+                  <td className="px-4 py-3 text-gray-600">{row.contact?.email || '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">Step {row.enrollment.currentStep || 0}</td>
+                  <td className="px-4 py-3">
+                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusStyles[row.enrollment.status] || 'bg-gray-100 text-gray-500')}>
+                      {row.enrollment.status}
+                    </span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-      </div>
-
-      {showEnroll && (
-        <EnrollDistrictsModal
-          campaignId={campaignId}
-          onClose={() => setShowEnroll(false)}
-          onEnrolled={() => { setShowEnroll(false); loadEnrollments(); }}
-        />
-      )}
-    </div>
-  );
-}
-
-function EnrollDistrictsModal({
-  campaignId,
-  onClose,
-  onEnrolled,
-}: {
-  campaignId: string;
-  onClose: () => void;
-  onEnrolled: () => void;
-}) {
-  const [districts, setDistricts] = useState<DistrictOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
-  const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    api.get<{ districts: DistrictOption[] }>('/api/marketing/districts?limit=500')
-      .then((d) => setDistricts(d.districts || []))
-      .catch(() => setDistricts([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleEnroll() {
-    if (selected.size === 0) return;
-    setSaving(true);
-    try {
-      await api.post(`/api/marketing/campaigns/${campaignId}/enrollments`, {
-        district_ids: Array.from(selected),
-      });
-      onEnrolled();
-    } catch {
-      alert('Failed to enroll districts');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const filtered = districts.filter((d) =>
-    d.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 pb-3">
-          <h2 className="text-lg font-bold text-primary-dark">Enroll Districts</h2>
-          <button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button>
-        </div>
-
-        <div className="px-6 pb-3">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search districts..."
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6">
-          {loading ? (
-            <p className="text-gray-400 py-4">Loading districts...</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-gray-400 py-4">No districts found</p>
-          ) : (
-            <div className="space-y-1">
-              {filtered.map((d) => (
-                <label key={d.id} className="flex items-center gap-3 py-2 px-2 rounded hover:bg-sand/50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(d.id)}
-                    onChange={() => toggle(d.id)}
-                    className="rounded border-gray-300 text-primary"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{d.name}</p>
-                    {d.contact_name && <p className="text-xs text-gray-500">{d.contact_name}</p>}
-                  </div>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="p-6 pt-3 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-sm text-gray-500">{selected.size} selected</span>
-          <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600">Cancel</button>
-            <button
-              onClick={handleEnroll}
-              disabled={selected.size === 0 || saving}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50"
-            >
-              {saving ? 'Enrolling...' : 'Enroll Selected'}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -694,41 +679,30 @@ function MetricsTab({ campaignId }: { campaignId: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Metrics>(`/api/marketing/campaigns/${campaignId}/metrics`)
+    api.get<any>(`/api/marketing/campaigns/${campaignId}/metrics`)
       .then((d) => setMetrics(d))
       .catch(() => setMetrics(null))
       .finally(() => setLoading(false));
   }, [campaignId]);
 
-  if (loading) {
-    return <div className="p-8 text-center text-gray-400">Loading metrics...</div>;
-  }
-
-  if (!metrics) {
-    return <div className="p-8 text-center text-gray-400">No metrics available</div>;
-  }
-
-  const openRate = metrics.emails_sent > 0 ? ((metrics.opened / metrics.emails_sent) * 100).toFixed(1) : '0.0';
-  const clickRate = metrics.emails_sent > 0 ? ((metrics.clicked / metrics.emails_sent) * 100).toFixed(1) : '0.0';
-  const replyRate = metrics.emails_sent > 0 ? ((metrics.replied / metrics.emails_sent) * 100).toFixed(1) : '0.0';
+  if (loading) return <div className="p-8 text-center text-gray-400">Loading metrics...</div>;
+  if (!metrics) return <div className="p-8 text-center text-gray-400">No metrics available</div>;
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-primary-dark">Campaign Metrics</h2>
-
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <MetricCard label="Total Enrolled" value={metrics.total_enrolled} />
-        <MetricCard label="Emails Sent" value={metrics.emails_sent} />
+        <MetricCard label="Total Enrolled" value={metrics.totalEnrollments} />
+        <MetricCard label="Emails Sent" value={metrics.sent} />
         <MetricCard label="Opened" value={metrics.opened} />
         <MetricCard label="Clicked" value={metrics.clicked} />
         <MetricCard label="Replied" value={metrics.replied} />
         <MetricCard label="Bounced" value={metrics.bounced} />
       </div>
-
       <div className="grid grid-cols-3 gap-4">
-        <RateCard label="Open Rate" value={`${openRate}%`} />
-        <RateCard label="Click Rate" value={`${clickRate}%`} />
-        <RateCard label="Reply Rate" value={`${replyRate}%`} />
+        <RateCard label="Open Rate" value={`${metrics.openRate}%`} />
+        <RateCard label="Click Rate" value={`${metrics.clickRate}%`} />
+        <RateCard label="Reply Rate" value={`${metrics.replyRate}%`} />
       </div>
     </div>
   );

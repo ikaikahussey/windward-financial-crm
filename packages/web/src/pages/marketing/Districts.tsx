@@ -103,7 +103,7 @@ export default function MarketingDistricts() {
   }
 
   async function handleLaunchCampaign() {
-    if (!confirm('This will:\n\n1. Search for superintendent/principal contacts for all districts\n2. Create a 3-step Section 125 email campaign\n3. Enroll all districts with contacts\n4. Launch the campaign immediately\n\nProceed?')) return;
+    if (!confirm('This will:\n\n1. Search for superintendent/principal contacts for all districts\n2. Create a 3-step Section 125 email campaign\n3. Enroll all districts with contacts\n\nYou will review and approve each email before anything is sent.\n\nProceed?')) return;
     setLaunching(true);
     try {
       const result = await api.post<{ campaignId: number; contactsCreated: number; districtsEnrolled: number }>('/api/marketing/launch-section125');
@@ -120,18 +120,18 @@ export default function MarketingDistricts() {
     <div className="space-y-4">
       {/* Launch Result Banner */}
       {launchResult && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
           <div>
-            <p className="font-semibold text-green-800">Section 125 Campaign Launched!</p>
-            <p className="text-sm text-green-700 mt-1">
-              {launchResult.contactsCreated} new contacts found &bull; {launchResult.districtsEnrolled} districts enrolled &bull; 3-step email sequence active
+            <p className="font-semibold text-amber-800">Section 125 Campaign Ready for Review</p>
+            <p className="text-sm text-amber-700 mt-1">
+              {launchResult.contactsCreated} new contacts found &bull; {launchResult.districtsEnrolled} districts enrolled &bull; 3-step email sequence created as draft
             </p>
           </div>
           <button
             onClick={() => navigate(`/marketing/campaigns/${launchResult.campaignId}`)}
-            className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition"
+            className="bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-800 transition"
           >
-            View Campaign
+            Review &amp; Approve Emails
           </button>
         </div>
       )}
@@ -160,7 +160,7 @@ export default function MarketingDistricts() {
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium disabled:opacity-50"
           >
             <Rocket className="h-4 w-4" />
-            {launching ? 'Launching...' : 'Launch Section 125 Campaign'}
+            {launching ? 'Setting up...' : 'Create Section 125 Campaign'}
           </button>
         </div>
       </div>

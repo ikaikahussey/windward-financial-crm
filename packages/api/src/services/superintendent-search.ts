@@ -320,11 +320,8 @@ export async function createAndLaunchSection125Campaign(): Promise<{
     });
   }
 
-  // Step 5: Launch
-  const { launchCampaign } = await import('./campaign-engine');
-  await launchCampaign(campaign.id);
-
-  console.log(`Section 125 campaign created and launched: ${campaign.id}, ${enrollments.length} districts enrolled`);
+  // Campaign stays in DRAFT — user must review and approve before launching
+  console.log(`Section 125 campaign created (draft): ${campaign.id}, ${enrollments.length} districts enrolled`);
 
   return {
     campaignId: campaign.id,
