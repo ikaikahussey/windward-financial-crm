@@ -19,6 +19,12 @@ import CmsTeam from '@/pages/cms/Team';
 import CmsEvents from '@/pages/cms/Events';
 import CmsBlog from '@/pages/cms/Blog';
 import CmsSubscribers from '@/pages/cms/Subscribers';
+import MarketingDashboard from '@/pages/marketing/Dashboard';
+import MarketingDistricts from '@/pages/marketing/Districts';
+import MarketingCampaigns from '@/pages/marketing/Campaigns';
+import MarketingCampaignDetail from '@/pages/marketing/CampaignDetail';
+import MarketingWebinars from '@/pages/marketing/Webinars';
+import MarketingAds from '@/pages/marketing/Ads';
 
 export default function App() {
   const { user, isLoading } = useAuth();
@@ -62,6 +68,12 @@ export default function App() {
           <Route path="/cms/events" element={<CmsEvents />} />
           <Route path="/cms/blog" element={<CmsBlog />} />
           <Route path="/cms/subscribers" element={<CmsSubscribers />} />
+          <Route path="/marketing" element={<MarketingDashboard />} />
+          <Route path="/marketing/districts" element={<MarketingDistricts />} />
+          <Route path="/marketing/campaigns" element={<MarketingCampaigns />} />
+          <Route path="/marketing/campaigns/:id" element={<MarketingCampaignDetail />} />
+          <Route path="/marketing/webinars" element={<MarketingWebinars />} />
+          <Route path="/marketing/ads" element={<MarketingAds />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

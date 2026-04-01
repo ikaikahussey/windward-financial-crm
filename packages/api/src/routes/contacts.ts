@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { contacts, pipelineEntries, activities, users } from '../db/schema';
 import { eq, desc, and, or, ilike, sql, SQL } from 'drizzle-orm';
+import { processStageChange } from '../services/automation';
 
 const router = Router();
 
@@ -316,27 +317,32 @@ router.patch('/:id/stage', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'pipelineStage is required' });
     }
 
-    // Create new pipeline entry
-    const [entry] = await db.insert(pipelineEntries).values({
-      contactId,
-      pipelineStage,
-      movedBy: req.session.userId,
-    }).returning();
+    // Get current stage for the automation engine
+    const [currentStageEntry] = await db
+      .select({ pipelineStage: pipelineEntries.pipelineStage })
+      .from(pipelineEntries)
+      .where(eq(pipelineEntries.contactId, contactId))
+      .orderBy(desc(pipelineEntries.movedAt))
+      .limit(1);
 
-    // Log as activity
-    await db.insert(activities).values({
-      contactId,
-      userId: req.session.userId,
-      activityType: 'Stage Change',
-      subject: `Stage changed to ${pipelineStage}`,
-      body: `Pipeline stage updated to "${pipelineStage}"`,
-    });
+    const oldStage = currentStageEntry?.pipelineStage ?? null;
+
+    // Process stage change — creates pipeline entry, logs activity, and fires automations
+    await processStageChange(contactId, oldStage, pipelineStage, req.session.userId!);
 
     // Update contact's updatedAt
     await db
       .update(contacts)
       .set({ updatedAt: new Date() })
       .where(eq(contacts.id, contactId));
+
+    // Return the latest pipeline entry
+    const [entry] = await db
+      .select()
+      .from(pipelineEntries)
+      .where(eq(pipelineEntries.contactId, contactId))
+      .orderBy(desc(pipelineEntries.movedAt))
+      .limit(1);
 
     return res.json(entry);
   } catch (error) {

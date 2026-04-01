@@ -25,11 +25,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center">
-                <span className="text-primary-dark font-heading text-xl font-bold">W</span>
-              </div>
-              <span className="font-heading text-xl">Windward Financial</span>
+            <div className="mb-4">
+              <img src="/logo.png" alt="Windward Financial" className="h-12 w-auto brightness-0 invert" />
             </div>
             <p className="text-primary-light/80 text-sm italic leading-relaxed">
               Honesty, communication, trust, and expertise

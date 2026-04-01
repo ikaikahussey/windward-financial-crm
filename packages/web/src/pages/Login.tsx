@@ -26,8 +26,8 @@ export default function Login() {
       <div className="w-full max-w-md mx-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-primary-dark">Windward Financial</h1>
-            <p className="text-sm text-gray-500 mt-1">Admin CRM</p>
+            <img src="/logo.png" alt="Windward Financial" className="h-14 w-auto mx-auto" />
+            <p className="text-sm text-gray-500 mt-2">Admin CRM</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

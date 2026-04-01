@@ -14,6 +14,7 @@ import { processEmailQueue } from './email-sender';
 import { quoService } from './quo';
 import { scoreContact } from './lead-scoring';
 import { generateBlogDraft, generateNewsletter } from './content-engine';
+import { processCampaignQueue } from './campaign-engine';
 
 // HST = UTC-10, no daylight saving
 // node-cron runs in system TZ by default; we specify timezone explicitly.
@@ -304,6 +305,15 @@ export function startCronJobs(): void {
       await processEmailQueue();
     } catch (err) {
       console.error('Cron [email-queue]:', err);
+    }
+  });
+
+  // Every 5 minutes: process campaign email queue
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await processCampaignQueue();
+    } catch (err) {
+      console.error('Cron [campaign-queue]:', err);
     }
   });
 

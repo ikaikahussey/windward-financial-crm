@@ -336,6 +336,137 @@ export const newsletterSubscribers = pgTable('newsletter_subscribers', {
   contactId: integer('contact_id').references(() => contacts.id),
 });
 
+// ── Marketing Module Enums ──
+
+export const productionStatusEnum = pgEnum('production_status', ['Dormant', 'Low Prod']);
+export const campaignTypeEnum = pgEnum('campaign_type', ['email', 'webinar', 'pdf']);
+export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'active', 'paused', 'completed']);
+export const campaignStepTypeEnum = pgEnum('campaign_step_type', ['email', 'sms']);
+export const enrollmentStatusEnum = pgEnum('enrollment_status', ['pending', 'active', 'completed', 'unsubscribed']);
+export const campaignEventTypeEnum = pgEnum('campaign_event_type', ['sent', 'opened', 'clicked', 'replied', 'bounced']);
+export const documentStatusEnum = pgEnum('document_status', ['sent', 'viewed', 'signed', 'expired']);
+export const adPlatformEnum = pgEnum('ad_platform', ['google', 'meta', 'linkedin']);
+export const adCampaignStatusEnum = pgEnum('ad_campaign_status', ['draft', 'active', 'paused', 'completed']);
+
+// ── Marketing Module Tables ──
+
+export const districts = pgTable('districts', {
+  id: serial('id').primaryKey(),
+  employerName: varchar('employer_name', { length: 500 }).notNull(),
+  city: varchar('city', { length: 255 }),
+  county: varchar('county', { length: 255 }),
+  state: varchar('state', { length: 2 }),
+  groupType: varchar('group_type', { length: 255 }),
+  classificationSource: text('classification_source'),
+  productionStatus: productionStatusEnum('production_status'),
+  planAdminName: varchar('plan_admin_name', { length: 500 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const districtContacts = pgTable('district_contacts', {
+  id: serial('id').primaryKey(),
+  districtId: integer('district_id').references(() => districts.id).notNull(),
+  firstName: varchar('first_name', { length: 255 }),
+  lastName: varchar('last_name', { length: 255 }),
+  title: varchar('title', { length: 255 }),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  linkedinUrl: text('linkedin_url'),
+  foundVia: text('found_via'),
+  verifiedAt: timestamp('verified_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const campaigns = pgTable('campaigns', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 500 }).notNull(),
+  type: campaignTypeEnum('type').notNull().default('email'),
+  status: campaignStatusEnum('status').notNull().default('draft'),
+  subject: varchar('subject', { length: 500 }),
+  fromName: varchar('from_name', { length: 255 }),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const campaignSteps = pgTable('campaign_steps', {
+  id: serial('id').primaryKey(),
+  campaignId: integer('campaign_id').references(() => campaigns.id).notNull(),
+  stepNumber: integer('step_number').notNull(),
+  delayDays: integer('delay_days').notNull().default(0),
+  subject: varchar('subject', { length: 500 }).notNull(),
+  body: text('body').notNull(),
+  type: campaignStepTypeEnum('type').notNull().default('email'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const campaignEnrollments = pgTable('campaign_enrollments', {
+  id: serial('id').primaryKey(),
+  campaignId: integer('campaign_id').references(() => campaigns.id).notNull(),
+  districtId: integer('district_id').references(() => districts.id).notNull(),
+  districtContactId: integer('district_contact_id').references(() => districtContacts.id),
+  status: enrollmentStatusEnum('status').notNull().default('pending'),
+  currentStep: integer('current_step').notNull().default(0),
+  enrolledAt: timestamp('enrolled_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  lastStepSentAt: timestamp('last_step_sent_at'),
+});
+
+export const campaignEvents = pgTable('campaign_events', {
+  id: serial('id').primaryKey(),
+  enrollmentId: integer('enrollment_id').references(() => campaignEnrollments.id).notNull(),
+  stepNumber: integer('step_number').notNull(),
+  eventType: campaignEventTypeEnum('event_type').notNull(),
+  occurredAt: timestamp('occurred_at').defaultNow().notNull(),
+  metadata: json('metadata'),
+});
+
+export const webinarRegistrations = pgTable('webinar_registrations', {
+  id: serial('id').primaryKey(),
+  districtContactId: integer('district_contact_id').references(() => districtContacts.id),
+  contactId: integer('contact_id').references(() => contacts.id),
+  firstName: varchar('first_name', { length: 255 }).notNull(),
+  lastName: varchar('last_name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 50 }),
+  districtName: varchar('district_name', { length: 500 }),
+  webinarDate: timestamp('webinar_date'),
+  webinarTopic: varchar('webinar_topic', { length: 500 }),
+  registeredAt: timestamp('registered_at').defaultNow().notNull(),
+  attended: boolean('attended'),
+});
+
+export const documentRequests = pgTable('document_requests', {
+  id: serial('id').primaryKey(),
+  districtId: integer('district_id').references(() => districts.id),
+  districtContactId: integer('district_contact_id').references(() => districtContacts.id),
+  contactId: integer('contact_id').references(() => contacts.id),
+  documentType: varchar('document_type', { length: 255 }).notNull(),
+  status: documentStatusEnum('status').notNull().default('sent'),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+  viewedAt: timestamp('viewed_at'),
+  signedAt: timestamp('signed_at'),
+  documentUrl: text('document_url'),
+});
+
+export const geoAdCampaigns = pgTable('geo_ad_campaigns', {
+  id: serial('id').primaryKey(),
+  districtId: integer('district_id').references(() => districts.id),
+  campaignId: integer('campaign_id').references(() => campaigns.id),
+  platform: adPlatformEnum('platform').notNull(),
+  status: adCampaignStatusEnum('status').notNull().default('draft'),
+  geoTarget: text('geo_target'),
+  budgetDaily: decimal('budget_daily', { precision: 10, scale: 2 }),
+  impressions: integer('impressions').notNull().default(0),
+  clicks: integer('clicks').notNull().default(0),
+  startDate: timestamp('start_date'),
+  endDate: timestamp('end_date'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // ── Types ──
 
 export interface ContentBlock {

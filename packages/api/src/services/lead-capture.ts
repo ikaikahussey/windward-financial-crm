@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { contacts, pipelineEntries, activities, newsletterSubscribers } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { processStageChange } from './automation';
 
 interface LeadData {
   firstName: string;
@@ -89,13 +90,11 @@ export async function createOrUpdateLead(
     })
     .returning();
 
-  // Create pipeline entry at "New Lead"
-  await db.insert(pipelineEntries).values({
-    contactId: newContact.id,
-    pipelineStage: 'New Lead',
-  });
+  // Process stage change — creates pipeline entry, logs activity, and fires automations
+  // (drip sequence enrollment, task creation, etc.)
+  await processStageChange(newContact.id, null, 'New Lead', 1); // userId 1 = system/default agent
 
-  // Log activity
+  // Log lead source activity
   await db.insert(activities).values({
     contactId: newContact.id,
     activityType: 'Note',

@@ -1,18 +1,11 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { db } from '../db';
 import { emailQueue, emailTemplates, contacts, users } from '../db/schema';
 import { eq, lte, and } from 'drizzle-orm';
 
-// Create reusable transport from environment variables
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Use Resend HTTP API (SMTP_PASS holds the Resend API key)
+const resendApiKey = process.env.SMTP_PASS || process.env.RESEND_API_KEY || '';
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const FROM_ADDRESS = process.env.EMAIL_FROM || 'info@windwardfinancial.com';
 const FROM_NAME = process.env.EMAIL_FROM_NAME || 'Windward Financial Group';
@@ -115,13 +108,22 @@ export async function processEmailQueue(): Promise<number> {
       const subject = renderMergeTags(template.subject, mergeData);
       const body = renderMergeTags(template.body, mergeData);
 
-      // Send the email
-      await transporter.sendMail({
-        from: `"${FROM_NAME}" <${FROM_ADDRESS}>`,
-        to: contact.email,
+      // Send via Resend HTTP API
+      if (!resend) {
+        console.warn(`Resend not configured, skipping email "${subject}" to ${contact.email}`);
+        continue;
+      }
+
+      const { error } = await resend.emails.send({
+        from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+        to: [contact.email],
         subject,
         html: body,
       });
+
+      if (error) {
+        throw new Error(`Resend API error: ${error.message}`);
+      }
 
       // Mark as sent
       await db

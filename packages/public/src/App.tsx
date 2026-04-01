@@ -14,6 +14,9 @@ import NationalLifeTransition from './pages/NationalLifeTransition';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import Resources from './pages/Resources';
+import Section125 from './pages/Section125';
+import Section125Webinar from './pages/Section125Webinar';
+import Section125Download from './pages/Section125Download';
 
 export default function App() {
   return (
@@ -34,6 +37,9 @@ export default function App() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/resources" element={<Resources />} />
+          <Route path="/section-125" element={<Section125 />} />
+          <Route path="/section-125/webinar" element={<Section125Webinar />} />
+          <Route path="/section-125/download" element={<Section125Download />} />
         </Routes>
       </Layout>
     </BrowserRouter>

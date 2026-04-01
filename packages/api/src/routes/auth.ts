@@ -34,11 +34,13 @@ router.post('/login', async (req: Request, res: Response) => {
     req.session.userRole = user.role;
 
     return res.json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      phone: user.phone,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        phone: user.phone,
+      },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -82,7 +84,7 @@ router.get('/me', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    return res.json(user);
+    return res.json({ user });
   } catch (error) {
     console.error('Get me error:', error);
     return res.status(500).json({ error: 'Internal server error' });

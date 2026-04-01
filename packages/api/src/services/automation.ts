@@ -7,7 +7,7 @@ import {
   contacts,
   pipelineEntries,
 } from '../db/schema';
-import { eq, and, like } from 'drizzle-orm';
+import { eq, and, like, sql } from 'drizzle-orm';
 
 /**
  * Helper: find a template by name pattern, returning its ID or null.
@@ -80,32 +80,21 @@ export async function enrollInDripSequence(contactId: number): Promise<void> {
   const delaySchedule = [0, 2, 5, 9, 14, 21];
 
   // Find all drip templates ordered by sequence position
+  // Templates use sequencePosition (1-6) to define their order in the drip sequence
   const dripTemplates = await db
     .select({ id: emailTemplates.id, sequencePosition: emailTemplates.sequencePosition })
     .from(emailTemplates)
-    .where(like(emailTemplates.name, 'Drip %'))
+    .where(sql`${emailTemplates.sequencePosition} IS NOT NULL`)
     .orderBy(emailTemplates.sequencePosition);
 
-  // Use found templates, fall back to creating queue entries for templates
-  // that will exist by name convention
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < Math.min(dripTemplates.length, delaySchedule.length); i++) {
     const template = dripTemplates[i];
     if (template) {
       await queueEmailWithDelay(contactId, template.id, delaySchedule[i]);
-    } else {
-      // Try to find by exact name
-      const templateId = await findTemplateId(`Drip ${i + 1}%`);
-      if (templateId) {
-        await queueEmailWithDelay(contactId, templateId, delaySchedule[i]);
-      } else {
-        console.warn(
-          `Drip template ${i + 1} not found; skipping for contact ${contactId}`
-        );
-      }
     }
   }
 
-  console.log(`Enrolled contact ${contactId} in drip sequence`);
+  console.log(`Enrolled contact ${contactId} in drip sequence (${dripTemplates.length} emails queued)`);
 }
 
 /**

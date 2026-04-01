@@ -12,6 +12,7 @@ import {
   Mail,
   BarChart3,
   Globe,
+  Target,
   Settings,
   LogOut,
   Menu,
@@ -31,6 +32,14 @@ const mainLinks = [
   { to: '/reports', icon: BarChart3, label: 'Reports' },
 ];
 
+const marketingLinks = [
+  { to: '/marketing', label: 'Dashboard' },
+  { to: '/marketing/districts', label: 'Districts' },
+  { to: '/marketing/campaigns', label: 'Campaigns' },
+  { to: '/marketing/webinars', label: 'Webinars' },
+  { to: '/marketing/ads', label: 'Ad Campaigns' },
+];
+
 const cmsLinks = [
   { to: '/cms/pages', label: 'Pages' },
   { to: '/cms/blog', label: 'Blog' },
@@ -44,16 +53,18 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cmsOpen, setCmsOpen] = useState(false);
+  const [marketingOpen, setMarketingOpen] = useState(false);
   const location = useLocation();
 
   const isCmsActive = location.pathname.startsWith('/cms');
+  const isMarketingActive = location.pathname.startsWith('/marketing');
 
   const navContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-primary-dark/30">
-        <h1 className="text-lg font-bold text-white tracking-tight">Windward Financial</h1>
-        <p className="text-xs text-primary-light/70 mt-0.5">Admin CRM</p>
+        <img src="/logo.png" alt="Windward Financial" className="h-10 w-auto brightness-0 invert" />
+        <p className="text-xs text-primary-light/70 mt-1.5">Admin CRM</p>
       </div>
 
       {/* Navigation */}
@@ -102,6 +113,47 @@ export default function Sidebar() {
               <NavLink
                 key={link.to}
                 to={link.to}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'block px-3 py-2 rounded-md text-sm transition-colors',
+                    isActive
+                      ? 'text-white bg-primary-dark/50'
+                      : 'text-primary-light/60 hover:text-white hover:bg-primary-dark/30'
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+
+        {/* Marketing Section */}
+        <button
+          onClick={() => setMarketingOpen(!marketingOpen)}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full',
+            isMarketingActive
+              ? 'bg-primary-light/20 text-white'
+              : 'text-primary-light/70 hover:bg-primary-dark/50 hover:text-white'
+          )}
+        >
+          <Target className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">Marketing</span>
+          {marketingOpen || isMarketingActive ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+        </button>
+        {(marketingOpen || isMarketingActive) && (
+          <div className="ml-7 space-y-0.5">
+            {marketingLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/marketing'}
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
                   cn(

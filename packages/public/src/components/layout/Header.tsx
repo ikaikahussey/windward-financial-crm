@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/events', label: 'Events' },
   { to: '/blog', label: 'Blog' },
   { to: '/resources', label: 'Resources' },
+  { to: '/section-125', label: 'Section 125' },
   { to: '/contact', label: 'Contact' },
 ];
 
@@ -21,14 +22,8 @@ export default function Header() {
       <div className="container-wide mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center">
-              <span className="text-primary-dark font-heading text-xl font-bold">W</span>
-            </div>
-            <div>
-              <span className="font-heading text-xl md:text-2xl tracking-wide">Windward Financial</span>
-              <span className="hidden md:block text-xs text-primary-light/80 tracking-wider uppercase">Serving Hawaii&apos;s Public Employees</span>
-            </div>
+          <Link to="/" className="flex items-center shrink-0">
+            <img src="/logo.png" alt="Windward Financial" className="h-14 w-auto brightness-0 invert" />
           </Link>
 
           {/* Desktop Nav */}

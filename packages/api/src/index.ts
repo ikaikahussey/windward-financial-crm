@@ -19,6 +19,8 @@ import quoRoutes from './routes/quo';
 import webhooksQuoRoutes from './routes/webhooks-quo';
 import cmsRoutes from './routes/cms';
 import publicRoutes from './routes/public';
+import marketingRoutes from './routes/marketing';
+import marketingPublicRoutes from './routes/marketing-public';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -58,6 +60,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Public routes (no auth)
 app.use('/api/public', publicRoutes);
+app.use('/api/public', marketingPublicRoutes);
 app.use('/api/webhooks/quo', webhooksQuoRoutes);
 
 // Auth routes
@@ -73,6 +76,7 @@ app.use('/api/dashboard', requireAuth, dashboardRoutes);
 app.use('/api/reports', requireAuth, reportsRoutes);
 app.use('/api/quo', requireAuth, quoRoutes);
 app.use('/api/cms', requireAdmin, cmsRoutes);
+app.use('/api/marketing', requireAuth, marketingRoutes);
 
 // Error handler
 app.use(errorHandler);
