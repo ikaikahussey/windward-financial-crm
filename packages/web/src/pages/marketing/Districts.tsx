@@ -1,18 +1,21 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { Plus, Upload, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Upload, Search, X, ChevronLeft, ChevronRight, Rocket, Users, Zap } from 'lucide-react';
 
 interface District {
-  id: string;
-  name: string;
+  id: number;
+  employerName: string;
   city: string;
   county: string;
   state: string;
-  production_status: string;
-  plan_admin: string;
-  contact_name: string;
-  contact_count: number;
+  groupType: string;
+  classificationSource: string;
+  productionStatus: string;
+  planAdminName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface DistrictContact {
@@ -36,7 +39,10 @@ export default function MarketingDistricts() {
   const [uploading, setUploading] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
   const [searchingContact, setSearchingContact] = useState<string | null>(null);
+  const [launching, setLaunching] = useState(false);
+  const [launchResult, setLaunchResult] = useState<{ campaignId: number; contactsCreated: number; districtsEnrolled: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   function load() {
     setLoading(true);
@@ -46,10 +52,10 @@ export default function MarketingDistricts() {
     if (stateFilter) params.set('state', stateFilter);
     if (statusFilter) params.set('production_status', statusFilter);
 
-    api.get<{ districts: District[]; total_pages: number }>(`/api/marketing/districts?${params}`)
+    api.get<{ data: District[]; pagination: { totalPages: number } }>(`/api/marketing/districts?${params}`)
       .then((d) => {
-        setDistricts(d.districts || []);
-        setTotalPages(d.total_pages || 1);
+        setDistricts(d.data || []);
+        setTotalPages(d.pagination?.totalPages || 1);
       })
       .catch(() => setDistricts([]))
       .finally(() => setLoading(false));
@@ -96,8 +102,40 @@ export default function MarketingDistricts() {
     }
   }
 
+  async function handleLaunchCampaign() {
+    if (!confirm('This will:\n\n1. Search for superintendent/principal contacts for all districts\n2. Create a 3-step Section 125 email campaign\n3. Enroll all districts with contacts\n4. Launch the campaign immediately\n\nProceed?')) return;
+    setLaunching(true);
+    try {
+      const result = await api.post<{ campaignId: number; contactsCreated: number; districtsEnrolled: number }>('/api/marketing/launch-section125');
+      setLaunchResult(result);
+      load();
+    } catch (err) {
+      alert('Failed to launch campaign');
+    } finally {
+      setLaunching(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
+      {/* Launch Result Banner */}
+      {launchResult && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-green-800">Section 125 Campaign Launched!</p>
+            <p className="text-sm text-green-700 mt-1">
+              {launchResult.contactsCreated} new contacts found &bull; {launchResult.districtsEnrolled} districts enrolled &bull; 3-step email sequence active
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(`/marketing/campaigns/${launchResult.campaignId}`)}
+            className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition"
+          >
+            View Campaign
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-primary-dark">Districts</h1>
         <div className="flex items-center gap-2">
@@ -115,6 +153,14 @@ export default function MarketingDistricts() {
           >
             <Upload className="h-4 w-4" />
             {uploading ? 'Uploading...' : 'Upload CSV'}
+          </button>
+          <button
+            onClick={handleLaunchCampaign}
+            disabled={launching}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium disabled:opacity-50"
+          >
+            <Rocket className="h-4 w-4" />
+            {launching ? 'Launching...' : 'Launch Section 125 Campaign'}
           </button>
         </div>
       </div>
@@ -142,6 +188,7 @@ export default function MarketingDistricts() {
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
         >
           <option value="">All States</option>
+          <option value="HI">Hawaii</option>
           <option value="OR">Oregon</option>
           <option value="WA">Washington</option>
         </select>
@@ -173,7 +220,7 @@ export default function MarketingDistricts() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">State</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Plan Admin</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Contact</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Type</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600">Actions</th>
               </tr>
             </thead>
@@ -184,31 +231,31 @@ export default function MarketingDistricts() {
                   className="border-b border-sand-dark/50 hover:bg-sand/30 cursor-pointer"
                   onClick={() => setSelectedDistrict(d)}
                 >
-                  <td className="px-4 py-3 font-medium text-primary-dark">{d.name}</td>
+                  <td className="px-4 py-3 font-medium text-primary-dark">{d.employerName}</td>
                   <td className="px-4 py-3 text-gray-600">{d.city || '-'}</td>
                   <td className="px-4 py-3 text-gray-600">{d.county || '-'}</td>
                   <td className="px-4 py-3 text-gray-600">{d.state || '-'}</td>
                   <td className="px-4 py-3">
-                    {d.production_status && (
+                    {d.productionStatus && (
                       <span className={cn(
                         'px-2 py-0.5 rounded-full text-xs font-medium',
-                        d.production_status === 'Dormant'
+                        d.productionStatus === 'Dormant'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-amber-100 text-amber-700'
                       )}>
-                        {d.production_status}
+                        {d.productionStatus}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{d.plan_admin || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{d.contact_name || 'No contact'}</td>
+                  <td className="px-4 py-3 text-gray-600">{d.planAdminName || '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">{d.groupType || '-'}</td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={(e) => { e.stopPropagation(); searchContact(d.id); }}
-                      disabled={searchingContact === d.id}
+                      onClick={(e) => { e.stopPropagation(); searchContact(String(d.id)); }}
+                      disabled={searchingContact === String(d.id)}
                       className="text-xs bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition disabled:opacity-50"
                     >
-                      {searchingContact === d.id ? 'Searching...' : 'Search Superintendent'}
+                      {searchingContact === String(d.id) ? 'Searching...' : 'Search Superintendent'}
                     </button>
                   </td>
                 </tr>
@@ -267,7 +314,7 @@ function DistrictDetailModal({ district, onClose }: { district: District; onClos
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-primary-dark">{district.name}</h2>
+          <h2 className="text-lg font-bold text-primary-dark">{district.employerName}</h2>
           <button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button>
         </div>
 
@@ -275,8 +322,9 @@ function DistrictDetailModal({ district, onClose }: { district: District; onClos
           <div><span className="text-gray-500">City:</span> <span className="font-medium">{district.city || '-'}</span></div>
           <div><span className="text-gray-500">County:</span> <span className="font-medium">{district.county || '-'}</span></div>
           <div><span className="text-gray-500">State:</span> <span className="font-medium">{district.state || '-'}</span></div>
-          <div><span className="text-gray-500">Status:</span> <span className="font-medium">{district.production_status || '-'}</span></div>
-          <div><span className="text-gray-500">Plan Admin:</span> <span className="font-medium">{district.plan_admin || '-'}</span></div>
+          <div><span className="text-gray-500">Status:</span> <span className="font-medium">{district.productionStatus || '-'}</span></div>
+          <div><span className="text-gray-500">Type:</span> <span className="font-medium">{district.groupType || '-'}</span></div>
+          <div><span className="text-gray-500">Plan Admin:</span> <span className="font-medium">{district.planAdminName || '-'}</span></div>
         </div>
 
         <h3 className="font-semibold text-primary-dark mb-2">Contacts</h3>

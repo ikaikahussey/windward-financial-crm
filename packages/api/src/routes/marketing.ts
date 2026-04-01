@@ -9,6 +9,7 @@ import {
 } from '../db/schema';
 import { eq, desc, and, or, ilike, sql, asc } from 'drizzle-orm';
 import { launchCampaign, pauseCampaign, getCampaignMetrics } from '../services/campaign-engine';
+import { searchSuperintendent, searchAllSuperintendents, createAndLaunchSection125Campaign } from '../services/superintendent-search';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -82,6 +83,31 @@ router.post('/districts/upload-csv', upload.single('file'), async (req: Request,
   }
 });
 
+// POST /districts/search-all — search superintendents for all districts
+router.post('/districts/search-all', async (_req: Request, res: Response) => {
+  try {
+    const result = await searchAllSuperintendents();
+    return res.json(result);
+  } catch (error) {
+    console.error('Search all contacts error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /launch-section125 — one-click: search contacts → create campaign → enroll → launch
+router.post('/launch-section125', async (_req: Request, res: Response) => {
+  try {
+    const result = await createAndLaunchSection125Campaign();
+    return res.json({
+      message: 'Section 125 campaign created and launched!',
+      ...result,
+    });
+  } catch (error) {
+    console.error('Launch Section 125 campaign error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /districts/:id
 router.get('/districts/:id', async (req: Request, res: Response) => {
   try {
@@ -144,19 +170,29 @@ router.post('/districts/:id/contacts', async (req: Request, res: Response) => {
   }
 });
 
-// POST /districts/:id/search-contact — trigger superintendent search (placeholder)
+// POST /districts/:id/search-contact — search for superintendent/principal
 router.post('/districts/:id/search-contact', async (req: Request, res: Response) => {
   try {
     const districtId = parseInt(req.params.id as string);
-    const [district] = await db.select().from(districts).where(eq(districts.id, districtId)).limit(1);
-    if (!district) return res.status(404).json({ error: 'District not found' });
+    const result = await searchSuperintendent(districtId);
 
-    // Return placeholder — actual AI search will be done via the marketing module
+    if (!result.found || !result.contact) {
+      return res.json({ districtId, status: 'not_found', message: 'No contact found for this district' });
+    }
+
+    // Create the contact in the database
+    const [contact] = await db.insert(districtContacts).values({
+      districtId,
+      firstName: result.contact.firstName,
+      lastName: result.contact.lastName,
+      title: result.contact.title,
+      email: result.contact.email,
+    }).returning();
+
     return res.json({
       districtId,
-      districtName: district.employerName,
-      status: 'search_pending',
-      message: `Superintendent search queued for ${district.employerName}`,
+      status: 'found',
+      contact,
     });
   } catch (error) {
     console.error('Search contact error:', error);
