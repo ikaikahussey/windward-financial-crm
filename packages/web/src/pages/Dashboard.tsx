@@ -36,20 +36,67 @@ export default function Dashboard() {
 
   useEffect(() => {
     Promise.all([
-      api.get<DashboardStats>('/api/dashboard/stats').catch(() => null),
-      api.get<{ activities: Activity[] }>('/api/dashboard/recent-activity').catch(() => ({ activities: [] })),
-      api.get<{ tasks: Task[] }>('/api/tasks?due=today&status=pending').catch(() => ({ tasks: [] })),
-      api.get<{ contacts: Contact[] }>('/api/contacts?limit=200').catch(() => ({ contacts: [] })),
+      api.get<any>('/api/dashboard/stats').catch(() => null),
+      api.get<any>('/api/dashboard/recent-activity').catch(() => []),
+      api.get<any>('/api/tasks?due=today&status=pending').catch(() => ({ tasks: [] })),
+      api.get<any>('/api/contacts?limit=200').catch(() => ({ contacts: [] })),
     ]).then(([s, a, t, c]) => {
-      setStats(s);
-      setActivities(a.activities);
-      setTodayTasks(t.tasks);
+      // Map API camelCase to frontend snake_case
+      if (s) {
+        const byStage: Record<string, number> = {};
+        const stageRows = Array.isArray(s.contactsPerStage) ? s.contactsPerStage : (s.contactsPerStage?.rows ?? []);
+        stageRows.forEach((r: any) => {
+          // Map DB stage names to frontend keys
+          const stageMap: Record<string, string> = {
+            'New Lead': 'new_lead',
+            'Contacted': 'contacted',
+            'Discovery Scheduled': 'discovery_scheduled',
+            'Discovery Completed': 'discovery_completed',
+            'Proposal Sent': 'proposal_sent',
+            'Follow Up': 'follow_up',
+            'Closed Won': 'closed_won',
+            'Closed Lost': 'closed_lost',
+            'Lost / Not Now': 'closed_lost',
+            'Nurture': 'nurture',
+          };
+          const key = stageMap[r.stage] || r.stage;
+          byStage[key] = (byStage[key] || 0) + (r.count || 0);
+        });
+        setStats({
+          total_contacts: s.totalContacts ?? s.total_contacts ?? 0,
+          by_stage: byStage as any,
+          tasks_due_today: s.tasksDueToday ?? s.tasks_due_today ?? 0,
+          overdue_tasks: s.overdueTasks ?? s.overdue_tasks ?? 0,
+          appointments_this_week: s.appointmentsThisWeek ?? s.appointments_this_week ?? 0,
+        });
+      }
+
+      // API returns array directly or { activities: [...] }
+      const rawActivities = Array.isArray(a) ? a : (a?.activities ?? []);
+      setActivities(rawActivities.map((r: any) => ({
+        id: r.id,
+        contact_id: r.contactId ?? r.contact_id,
+        user_id: r.userId ?? r.user_id,
+        user: r.userName ? { name: r.userName } : r.user,
+        type: r.activityType ?? r.type ?? 'note',
+        title: r.subject ?? r.title ?? '',
+        description: r.body ?? r.description,
+        created_at: r.createdAt ?? r.created_at,
+      })));
+
+      // Tasks may be array or { tasks: [...] }
+      const rawTasks = Array.isArray(t) ? t : (t?.tasks ?? []);
+      setTodayTasks(rawTasks);
+
+      // Contacts may be array or { contacts: [...] }
+      const rawContacts = Array.isArray(c) ? c : (c?.contacts ?? []);
       // Group contacts by stage for mini kanban
       const grouped: Record<string, Contact[]> = {};
       STAGES.forEach((st) => (grouped[st.key] = []));
-      (c.contacts || []).forEach((contact: Contact) => {
-        if (grouped[contact.pipeline_stage]) {
-          grouped[contact.pipeline_stage].push(contact);
+      rawContacts.forEach((contact: any) => {
+        const stage = contact.pipeline_stage ?? contact.pipelineStage;
+        if (stage && grouped[stage]) {
+          grouped[stage].push(contact);
         }
       });
       setPipelineContacts(grouped as Record<PipelineStage, Contact[]>);
