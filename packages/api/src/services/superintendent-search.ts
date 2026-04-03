@@ -177,13 +177,16 @@ export async function searchAllSuperintendents(): Promise<{ searched: number; fo
  *
  * Returns the campaign ID.
  */
-export async function createAndLaunchSection125Campaign(): Promise<{
+export async function createAndLaunchSection125Campaign(districtIds?: number[]): Promise<{
   campaignId: number;
   contactsCreated: number;
   districtsEnrolled: number;
 }> {
-  // Step 1: Search all superintendents
-  const searchResult = await searchAllSuperintendents();
+  // Step 1: Search superintendents (only for specified districts if provided)
+  let searchResult = { searched: 0, found: 0, created: 0 };
+  if (!districtIds) {
+    searchResult = await searchAllSuperintendents();
+  }
 
   // Step 2: Create campaign
   const [campaign] = await db.insert(campaigns).values({
@@ -294,13 +297,22 @@ export async function createAndLaunchSection125Campaign(): Promise<{
     });
   }
 
-  // Step 4: Enroll all districts that have contacts with emails
-  const contactsWithEmails = await db.select({
-    districtId: districtContacts.districtId,
-    contactId: districtContacts.id,
-  })
-  .from(districtContacts)
-  .where(sql`${districtContacts.email} IS NOT NULL AND ${districtContacts.email} != ''`);
+  // Step 4: Enroll districts that have contacts with emails
+  const contactsQuery = districtIds
+    ? await db.select({
+        districtId: districtContacts.districtId,
+        contactId: districtContacts.id,
+      })
+      .from(districtContacts)
+      .where(sql`${districtContacts.email} IS NOT NULL AND ${districtContacts.email} != '' AND ${districtContacts.districtId} IN ${districtIds}`)
+    : await db.select({
+        districtId: districtContacts.districtId,
+        contactId: districtContacts.id,
+      })
+      .from(districtContacts)
+      .where(sql`${districtContacts.email} IS NOT NULL AND ${districtContacts.email} != ''`);
+
+  const contactsWithEmails = contactsQuery;
 
   const enrolledDistrictIds = new Set<number>();
   const enrollments: { districtId: number; districtContactId: number }[] = [];

@@ -16,7 +16,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 // ── Districts ──
 
-// GET /districts — list with filters
+// GET /districts — list with filters, includes first contact per district
 router.get('/districts', async (req: Request, res: Response) => {
   try {
     const { state, county, production_status, search, page = '1', limit = '50' } = req.query;
@@ -46,7 +46,25 @@ router.get('/districts', async (req: Request, res: Response) => {
       ? await db.select({ count: sql<number>`count(*)::int` }).from(districts).where(whereClause)
       : await db.select({ count: sql<number>`count(*)::int` }).from(districts);
 
-    return res.json({ data: rows, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } });
+    // Fetch first contact for each district in the result set
+    const districtIds = rows.map(r => r.id);
+    let contactsByDistrict: Record<number, any> = {};
+    if (districtIds.length > 0) {
+      const contacts = await db.select().from(districtContacts)
+        .where(sql`${districtContacts.districtId} IN ${districtIds}`);
+      for (const c of contacts) {
+        if (!contactsByDistrict[c.districtId]) {
+          contactsByDistrict[c.districtId] = c;
+        }
+      }
+    }
+
+    const data = rows.map(r => ({
+      ...r,
+      contact: contactsByDistrict[r.id] || null,
+    }));
+
+    return res.json({ data, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } });
   } catch (error) {
     console.error('List districts error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -94,14 +112,80 @@ router.post('/districts/search-all', async (_req: Request, res: Response) => {
   }
 });
 
-// POST /launch-section125 — one-click: search contacts → create campaign → enroll → launch
-router.post('/launch-section125', async (_req: Request, res: Response) => {
+// POST /districts/search-batch — search contacts for specific district IDs
+router.post('/districts/search-batch', async (req: Request, res: Response) => {
   try {
+    const { districtIds } = req.body;
+    if (!Array.isArray(districtIds) || districtIds.length === 0) {
+      return res.status(400).json({ error: 'districtIds array is required' });
+    }
+
+    const results: { districtId: number; found: boolean; contact?: any }[] = [];
+    for (const districtId of districtIds) {
+      // Check if already has a contact
+      const existing = await db.select().from(districtContacts)
+        .where(eq(districtContacts.districtId, districtId)).limit(1);
+      if (existing.length > 0) {
+        results.push({ districtId, found: true, contact: existing[0] });
+        continue;
+      }
+
+      const result = await searchSuperintendent(districtId);
+      if (result.found && result.contact) {
+        const [contact] = await db.insert(districtContacts).values({
+          districtId,
+          firstName: result.contact.firstName,
+          lastName: result.contact.lastName,
+          title: result.contact.title,
+          email: result.contact.email,
+        }).returning();
+        results.push({ districtId, found: true, contact });
+      } else {
+        results.push({ districtId, found: false });
+      }
+    }
+    return res.json({ results });
+  } catch (error) {
+    console.error('Batch search error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /district-contacts/:id — edit a district contact
+router.patch('/district-contacts/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id as string);
+    const { firstName, lastName, title, email, phone } = req.body;
+    const updates: any = {};
+    if (firstName !== undefined) updates.firstName = firstName;
+    if (lastName !== undefined) updates.lastName = lastName;
+    if (title !== undefined) updates.title = title;
+    if (email !== undefined) updates.email = email;
+    if (phone !== undefined) updates.phone = phone;
+
+    const [updated] = await db.update(districtContacts)
+      .set(updates)
+      .where(eq(districtContacts.id, id)).returning();
+    if (!updated) return res.status(404).json({ error: 'Contact not found' });
+    return res.json(updated);
+  } catch (error) {
+    console.error('Update district contact error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /launch-section125 — create campaign for selected districts
+router.post('/launch-section125', async (req: Request, res: Response) => {
+  try {
+    const { districtIds } = req.body;
+    // If districtIds provided, create campaign for just those districts
+    if (Array.isArray(districtIds) && districtIds.length > 0) {
+      const result = await createAndLaunchSection125Campaign(districtIds);
+      return res.json({ message: 'Section 125 campaign created!', ...result });
+    }
+    // Otherwise create for all
     const result = await createAndLaunchSection125Campaign();
-    return res.json({
-      message: 'Section 125 campaign created and launched!',
-      ...result,
-    });
+    return res.json({ message: 'Section 125 campaign created!', ...result });
   } catch (error) {
     console.error('Launch Section 125 campaign error:', error);
     return res.status(500).json({ error: 'Internal server error' });
