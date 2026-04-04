@@ -24,6 +24,7 @@ import MarketingDistricts from '@/pages/marketing/Districts';
 import MarketingCampaigns from '@/pages/marketing/Campaigns';
 import MarketingCampaignDetail from '@/pages/marketing/CampaignDetail';
 import MarketingWebinars from '@/pages/marketing/Webinars';
+import MarketingDistrictDetail from '@/pages/marketing/DistrictDetail';
 import MarketingAds from '@/pages/marketing/Ads';
 
 export default function App() {
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/cms/subscribers" element={<CmsSubscribers />} />
           <Route path="/marketing" element={<MarketingDashboard />} />
           <Route path="/marketing/districts" element={<MarketingDistricts />} />
+          <Route path="/marketing/districts/:id" element={<MarketingDistrictDetail />} />
           <Route path="/marketing/campaigns" element={<MarketingCampaigns />} />
           <Route path="/marketing/campaigns/:id" element={<MarketingCampaignDetail />} />
           <Route path="/marketing/webinars" element={<MarketingWebinars />} />

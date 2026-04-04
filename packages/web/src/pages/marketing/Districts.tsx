@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -535,7 +535,9 @@ export default function MarketingDistricts() {
 
                     {/* District */}
                     <td className="px-3 py-3">
-                      <div className="font-medium text-primary-dark">{d.employerName}</div>
+                      <Link to={`/marketing/districts/${d.id}`} className="font-medium text-primary-dark hover:underline" onClick={e => e.stopPropagation()}>
+                        {d.employerName}
+                      </Link>
                       <div className="text-xs text-gray-400">{d.groupType || d.state}</div>
                     </td>
 

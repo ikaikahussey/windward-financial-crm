@@ -192,7 +192,7 @@ router.post('/launch-section125', async (req: Request, res: Response) => {
   }
 });
 
-// GET /districts/:id
+// GET /districts/:id — includes contacts and campaign enrollments
 router.get('/districts/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
@@ -202,7 +202,26 @@ router.get('/districts/:id', async (req: Request, res: Response) => {
     // Get contacts for this district
     const contacts = await db.select().from(districtContacts).where(eq(districtContacts.districtId, id));
 
-    return res.json({ ...district, contacts });
+    // Get campaign enrollments with campaign info and events
+    const enrollments = await db.select({
+      enrollment: campaignEnrollments,
+      campaign: campaigns,
+    })
+    .from(campaignEnrollments)
+    .innerJoin(campaigns, eq(campaignEnrollments.campaignId, campaigns.id))
+    .where(eq(campaignEnrollments.districtId, id))
+    .orderBy(desc(campaignEnrollments.enrolledAt));
+
+    // Get events for these enrollments
+    const enrollmentIds = enrollments.map(e => e.enrollment.id);
+    let events: any[] = [];
+    if (enrollmentIds.length > 0) {
+      events = await db.select().from(campaignEvents)
+        .where(sql`${campaignEvents.enrollmentId} IN ${enrollmentIds}`)
+        .orderBy(desc(campaignEvents.occurredAt));
+    }
+
+    return res.json({ ...district, contacts, enrollments, events });
   } catch (error) {
     console.error('Get district error:', error);
     return res.status(500).json({ error: 'Internal server error' });

@@ -10,8 +10,9 @@
     },
     {
       "name": "Admin CRM",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "env": { "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" },
+      "runtimeArgs": ["/opt/homebrew/bin/npx", "vite", "--port", "5173"],
       "port": 5173,
       "cwd": "packages/web"
     },
