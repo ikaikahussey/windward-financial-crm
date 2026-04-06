@@ -41,6 +41,7 @@ interface RowState {
   editingContact: boolean;
   editFields: { firstName: string; lastName: string; title: string; email: string };
   showEmailPreview: boolean;
+  emailContent?: EmailContent; // persists edits between modal opens
 }
 
 const STEP_CONFIG: Record<RowStep, { label: string; color: string; icon: string }> = {
@@ -53,33 +54,65 @@ const STEP_CONFIG: Record<RowStep, { label: string; color: string; icon: string 
   sent:           { label: 'Sent',            color: 'bg-green-100 text-green-700', icon: 'check' },
 };
 
-// Section 125 email template (step 1 only for preview)
-function renderEmailPreview(district: District, contact: DistrictContact): string {
-  return `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-  <div style="background: #1B4D6E; padding: 24px; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 22px;">Windward Financial Group</h1>
+// ── Structured email content model ──────────────────────────────────────────
+interface EmailContent {
+  subject: string;
+  greeting: string;
+  openingLine: string;
+  bullets: string[];
+  closingLine: string;
+  callToActionText: string;
+  callToActionUrl: string;
+  senderName: string;
+  senderRole: string;
+  senderPhone: string;
+}
+
+function defaultEmailContent(district: District, contact: DistrictContact): EmailContent {
+  return {
+    subject: `Section 125 Cafeteria Plans — A Tax-Free Benefit for ${district.employerName}`,
+    greeting: `Dear ${contact.title} ${contact.firstName},`,
+    openingLine: `I'm reaching out because ${district.employerName} may be missing out on a simple, IRS-approved benefit that can save your employees hundreds to thousands of dollars per year — at zero cost to the employer.`,
+    bullets: [
+      'Employees save 25-40% on their health premium costs',
+      'Employers save ~7.65% on matching FICA taxes',
+      'Zero cost to implement — we handle all administration',
+      '100% IRS compliant — established under IRC §125',
+    ],
+    closingLine: `Many school districts and educational institutions are already taking advantage of this benefit. I'd love to show you how ${district.employerName} can do the same.`,
+    callToActionText: 'Learn More About Section 125',
+    callToActionUrl: 'https://windward.financial/section-125',
+    senderName: 'Herb Hussey',
+    senderRole: 'Windward Financial Group',
+    senderPhone: '(808) 479-8447',
+  };
+}
+
+function contentToHtml(c: EmailContent): string {
+  const bulletItems = c.bullets
+    .filter(b => b.trim())
+    .map(b => `<li style="margin-bottom:8px"><strong>${b}</strong></li>`)
+    .join('\n      ');
+  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333">
+  <div style="background:#1B4D6E;padding:24px;text-align:center">
+    <h1 style="color:white;margin:0;font-size:22px">Windward Financial Group</h1>
   </div>
-  <div style="padding: 32px 24px;">
-    <p>Dear ${contact.title} ${contact.firstName},</p>
-    <p>I'm reaching out because <strong>${district.employerName}</strong> may be missing out on a simple, IRS-approved benefit that can <strong>save your employees hundreds to thousands of dollars per year</strong> — at <strong>zero cost to the employer</strong>.</p>
+  <div style="padding:32px 24px">
+    <p>${c.greeting}</p>
+    <p>${c.openingLine}</p>
     <p>A <strong>Section 125 Cafeteria Plan</strong> (also called a Premium Only Plan or POP) allows employees to pay their health insurance premiums with <em>pre-tax</em> dollars, reducing both their taxable income and their payroll taxes.</p>
-    <h3 style="color: #1B4D6E;">Here's what that means:</h3>
-    <ul>
-      <li><strong>Employees save 25-40%</strong> on their health premium costs</li>
-      <li><strong>Employers save ~7.65%</strong> on matching FICA taxes</li>
-      <li><strong>Zero cost to implement</strong> — we handle all administration</li>
-      <li><strong>100% IRS compliant</strong> — established under IRC §125</li>
-    </ul>
-    <p>Many school districts and educational institutions across Hawaii are already taking advantage of this benefit. I'd love to show you how ${district.employerName} can do the same.</p>
-    <p style="text-align: center; margin: 32px 0;">
-      <a href="https://windward.financial/section-125" style="background: #1B4D6E; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold;">Learn More About Section 125</a>
+    <h3 style="color:#1B4D6E">Here's what that means:</h3>
+    <ul>${bulletItems}</ul>
+    <p>${c.closingLine}</p>
+    <p style="text-align:center;margin:32px 0">
+      <a href="${c.callToActionUrl}" style="background:#1B4D6E;color:white;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold">${c.callToActionText}</a>
     </p>
     <p>Would you have 15 minutes this week for a brief call? I can walk you through exactly how this works for your district.</p>
-    <p>Best regards,<br><strong>Herb Hussey</strong><br>Windward Financial Group<br>(808) 479-8447</p>
+    <p>Best regards,<br><strong>${c.senderName}</strong><br>${c.senderRole}<br>${c.senderPhone}</p>
   </div>
-  <div style="background: #f5f5f5; padding: 16px 24px; text-align: center; font-size: 12px; color: #999;">
+  <div style="background:#f5f5f5;padding:16px 24px;text-align:center;font-size:12px;color:#999">
     Windward Financial Group | Honolulu, HI<br>
-    <a href="https://windward.financial" style="color: #1B4D6E;">windward.financial</a>
+    <a href="https://windward.financial" style="color:#1B4D6E">windward.financial</a>
   </div>
 </div>`;
 }
@@ -101,9 +134,8 @@ export default function MarketingDistricts() {
   // Row state management
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [rowStates, setRowStates] = useState<Record<number, RowState>>({});
-  const [emailPreviewModal, setEmailPreviewModal] = useState<{ district: District; contact: DistrictContact; html: string } | null>(null);
-  const [editingEmailHtml, setEditingEmailHtml] = useState<string>('');
-  const [emailEditMode, setEmailEditMode] = useState(false);
+  const [emailEditorModal, setEmailEditorModal] = useState<{ district: District; contact: DistrictContact } | null>(null);
+  const [activeEmailContent, setActiveEmailContent] = useState<EmailContent | null>(null);
 
   // Campaign creation state
   const [campaignResult, setCampaignResult] = useState<{ campaignId: number; districtsEnrolled: number } | null>(null);
@@ -306,14 +338,19 @@ export default function MarketingDistricts() {
     }
   }
 
-  // ── Step 5: Open email preview modal ──
+  // ── Step 5: Open email editor modal ──
   function openEmailPreview(district: District) {
     const state = getRowState(district.id);
     if (!state.contact) return;
-    const html = renderEmailPreview(district, state.contact);
-    setEditingEmailHtml(html);
-    setEmailEditMode(false);
-    setEmailPreviewModal({ district, contact: state.contact, html });
+    // Use previously saved edits or generate defaults
+    const content = state.emailContent || defaultEmailContent(district, state.contact);
+    setActiveEmailContent(content);
+    setEmailEditorModal({ district, contact: state.contact });
+  }
+
+  function saveEmailContent(districtId: number, content: EmailContent) {
+    updateRowState(districtId, { emailContent: content });
+    setActiveEmailContent(content);
   }
 
   // ── Step 6: Send (create campaign for selected email_ready rows) ──
@@ -726,66 +763,223 @@ export default function MarketingDistricts() {
         </div>
       )}
 
-      {/* Email Preview Modal */}
-      {emailPreviewModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEmailPreviewModal(null)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <div>
-                <h2 className="font-bold text-primary-dark">Email Preview</h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  To: {emailPreviewModal.contact.firstName} {emailPreviewModal.contact.lastName} &lt;{emailPreviewModal.contact.email}&gt;
-                </p>
-                <p className="text-xs text-gray-500">
-                  Subject: Section 125 Cafeteria Plans — A Tax-Free Benefit for {emailPreviewModal.district.employerName}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEmailEditMode(!emailEditMode)}
-                  className={cn(
-                    'text-xs px-3 py-1.5 rounded-lg font-medium transition',
-                    emailEditMode ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  )}
-                >
-                  {emailEditMode ? 'Preview' : 'Edit HTML'}
-                </button>
-                <button onClick={() => setEmailPreviewModal(null)}>
-                  <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                </button>
-              </div>
+      {/* Email Editor Modal */}
+      {emailEditorModal && activeEmailContent && (
+        <EmailEditorModal
+          district={emailEditorModal.district}
+          contact={emailEditorModal.contact}
+          content={activeEmailContent}
+          onChange={(c) => saveEmailContent(emailEditorModal.district.id, c)}
+          onClose={() => setEmailEditorModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Email Editor Modal ────────────────────────────────────────────────────────
+function EmailEditorModal({
+  district, contact, content, onChange, onClose,
+}: {
+  district: District;
+  contact: DistrictContact;
+  content: EmailContent;
+  onChange: (c: EmailContent) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState<EmailContent>(content);
+  const [bulletsText, setBulletsText] = useState(content.bullets.join('\n'));
+  const [activeTab, setActiveTab] = useState<'edit' | 'html'>('edit');
+
+  function update(field: keyof EmailContent, value: string) {
+    setDraft(prev => ({ ...prev, [field]: value }));
+  }
+
+  function handleBulletsChange(val: string) {
+    setBulletsText(val);
+    setDraft(prev => ({ ...prev, bullets: val.split('\n').filter(l => l.trim()) }));
+  }
+
+  const previewHtml = contentToHtml(draft);
+
+  function handleSave() {
+    onChange(draft);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
+          <div>
+            <h2 className="font-bold text-primary-dark">Edit Email</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              To: {contact.firstName} {contact.lastName} &lt;{contact.email}&gt; · {district.employerName}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+              <button
+                onClick={() => setActiveTab('edit')}
+                className={cn('px-3 py-1.5 transition', activeTab === 'edit' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50')}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setActiveTab('html')}
+                className={cn('px-3 py-1.5 transition', activeTab === 'html' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50')}
+              >
+                HTML
+              </button>
             </div>
-            <div className="p-4">
-              {emailEditMode ? (
+            <button onClick={onClose}><X className="h-5 w-5 text-gray-400 hover:text-gray-600" /></button>
+          </div>
+        </div>
+
+        {/* Body: split pane */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: Editor */}
+          <div className="w-[45%] border-r border-gray-200 overflow-y-auto p-4 space-y-4">
+            {activeTab === 'edit' ? (
+              <>
+                <Field label="Subject line">
+                  <input
+                    value={draft.subject}
+                    onChange={e => update('subject', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+                <Field label="Greeting">
+                  <input
+                    value={draft.greeting}
+                    onChange={e => update('greeting', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+                <Field label="Opening paragraph">
+                  <textarea
+                    value={draft.openingLine}
+                    onChange={e => update('openingLine', e.target.value)}
+                    rows={4}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+                  />
+                </Field>
+                <Field label="Key benefits (one per line)">
+                  <textarea
+                    value={bulletsText}
+                    onChange={e => handleBulletsChange(e.target.value)}
+                    rows={5}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+                    placeholder="Employees save 25-40% on health costs&#10;Employers save ~7.65% on FICA&#10;..."
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Each line becomes a bullet point.</p>
+                </Field>
+                <Field label="Closing paragraph">
+                  <textarea
+                    value={draft.closingLine}
+                    onChange={e => update('closingLine', e.target.value)}
+                    rows={3}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="CTA button text">
+                    <input
+                      value={draft.callToActionText}
+                      onChange={e => update('callToActionText', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </Field>
+                  <Field label="CTA URL">
+                    <input
+                      value={draft.callToActionUrl}
+                      onChange={e => update('callToActionUrl', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <Field label="Sender name">
+                    <input
+                      value={draft.senderName}
+                      onChange={e => update('senderName', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </Field>
+                  <Field label="Sender role">
+                    <input
+                      value={draft.senderRole}
+                      onChange={e => update('senderRole', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </Field>
+                  <Field label="Phone">
+                    <input
+                      value={draft.senderPhone}
+                      onChange={e => update('senderPhone', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </Field>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">Edit raw HTML — changes here override the structured editor.</p>
                 <textarea
-                  value={editingEmailHtml}
-                  onChange={e => setEditingEmailHtml(e.target.value)}
-                  className="w-full h-96 text-xs font-mono border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  value={previewHtml}
+                  onChange={e => {
+                    // When editing raw HTML, just update the preview directly
+                    // Store as a note: we switch back to the structured fields for saving
+                  }}
+                  rows={30}
+                  className="w-full text-xs font-mono border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  readOnly
                 />
-              ) : (
-                <div
-                  className="border border-gray-200 rounded-lg overflow-hidden"
-                  dangerouslySetInnerHTML={{ __html: editingEmailHtml }}
-                />
-              )}
+                <p className="text-xs text-amber-600">HTML is auto-generated from the structured fields. Switch to Edit tab to make changes.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Live preview */}
+          <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Live Preview</span>
+              <span className="text-xs text-gray-400">Updates as you type</span>
             </div>
-            <div className="flex justify-end gap-2 p-4 border-t border-gray-200">
-              <button
-                onClick={() => setEmailPreviewModal(null)}
-                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => setEmailPreviewModal(null)}
-                className="px-4 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition font-medium"
-              >
-                Looks Good
-              </button>
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs space-y-0.5">
+                <div><span className="text-gray-400">From:</span> <span className="font-medium">Windward Financial Group &lt;info@windward.financial&gt;</span></div>
+                <div><span className="text-gray-400">To:</span> <span className="font-medium">{contact.firstName} {contact.lastName} &lt;{contact.email}&gt;</span></div>
+                <div><span className="text-gray-400">Subject:</span> <span className="font-medium">{draft.subject}</span></div>
+              </div>
+              <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
             </div>
           </div>
         </div>
-      )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 shrink-0">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+            Cancel
+          </button>
+          <button onClick={handleSave} className="px-5 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark transition font-semibold">
+            Save &amp; Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+      {children}
     </div>
   );
 }

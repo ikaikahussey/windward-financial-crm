@@ -505,7 +505,16 @@ function StepEditor({
     type: step?.type || 'email',
   });
   const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+
+  function renderPreview(html: string): string {
+    return html
+      .replace(/\{\{district_name\}\}/g, 'Castle High School Complex')
+      .replace(/\{\{first_name\}\}/g, 'Castle')
+      .replace(/\{\{last_name\}\}/g, 'CAS Office')
+      .replace(/\{\{title\}\}/g, 'Complex Area Superintendent')
+      .replace(/\{\{city\}\}/g, 'Kaneohe')
+      .replace(/\{\{state\}\}/g, 'HI');
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -532,68 +541,88 @@ function StepEditor({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-xl w-full max-w-5xl h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
           <h2 className="text-lg font-bold text-primary-dark">{step ? 'Edit' : 'Add'} Email Step</h2>
-          <button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button>
+          <button onClick={onClose}><X className="h-5 w-5 text-gray-400 hover:text-gray-600" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          {/* Meta fields row */}
+          <div className="px-5 py-3 border-b border-gray-100 grid grid-cols-4 gap-3 shrink-0">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Step #</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Step #</label>
               <input type="number" required min="1" value={form.stepNumber}
                 onChange={(e) => setForm({ ...form, stepNumber: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Delay (days)</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Delay (days)</label>
               <input type="number" required min="0" value={form.delayDays}
                 onChange={(e) => setForm({ ...form, delayDays: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
                 <option value="email">Email</option>
                 <option value="sms">SMS</option>
               </select>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-            <input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            <p className="text-xs text-gray-400 mt-1">Merge tags: {'{{district_name}}'}, {'{{first_name}}'}, {'{{last_name}}'}, {'{{title}}'}, {'{{city}}'}, {'{{state}}'}</p>
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Body (HTML)</label>
-              <button type="button" onClick={() => setShowPreview(!showPreview)} className="text-xs text-primary hover:underline">
-                {showPreview ? 'Show Code' : 'Show Preview'}
-              </button>
+            <div className="col-span-1">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Subject line</label>
+              <input required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
-            {showPreview ? (
-              <div className="border border-gray-200 rounded-lg p-4 min-h-[200px] max-h-[400px] overflow-y-auto">
-                <div dangerouslySetInnerHTML={{ __html: form.body
-                  .replace(/\{\{district_name\}\}/g, 'Castle High School Complex')
-                  .replace(/\{\{first_name\}\}/g, 'Castle')
-                  .replace(/\{\{last_name\}\}/g, 'CAS Office')
-                  .replace(/\{\{title\}\}/g, 'Complex Area Superintendent')
-                  .replace(/\{\{city\}\}/g, 'Kaneohe')
-                  .replace(/\{\{state\}\}/g, 'HI')
-                }} />
-              </div>
-            ) : (
-              <textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })}
-                rows={12}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono" />
-            )}
           </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50">
+
+          {/* Split pane: HTML editor | live preview */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left: HTML editor */}
+            <div className="w-1/2 border-r border-gray-200 flex flex-col">
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between shrink-0">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML Body</span>
+                <span className="text-xs text-gray-400">
+                  Merge tags: {'{{district_name}}'} {'{{first_name}}'} {'{{title}}'}
+                </span>
+              </div>
+              <textarea
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                className="flex-1 px-4 py-3 text-xs font-mono resize-none focus:outline-none"
+                placeholder="Paste or write your email HTML here..."
+              />
+            </div>
+
+            {/* Right: live preview */}
+            <div className="w-1/2 flex flex-col overflow-hidden">
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 shrink-0">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Live Preview</span>
+                <span className="text-xs text-gray-400 ml-2">Sample merge tags filled in</span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 bg-gray-50">
+                <div className="mb-2 text-xs text-gray-500 bg-white rounded border border-gray-100 px-3 py-1.5 space-y-0.5">
+                  <div><span className="text-gray-400">Subject:</span> <span className="font-medium">{renderPreview(form.subject)}</span></div>
+                </div>
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div dangerouslySetInnerHTML={{ __html: renderPreview(form.body) }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 px-5 py-3 border-t border-gray-200 shrink-0">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dark disabled:opacity-50 transition">
               {saving ? 'Saving...' : 'Save Step'}
             </button>
           </div>
