@@ -160,6 +160,100 @@ export default function Section125() {
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <section className="section-padding bg-sand">
+        <div className="container-narrow mx-auto">
+          <h2 className="font-heading text-3xl md:text-4xl text-primary-dark text-center mb-4">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-gray-600 text-lg text-center max-w-2xl mx-auto mb-12">
+            Common questions about Section 125 Cafeteria Plans and the MEC Plan.
+          </p>
+          <div className="space-y-6">
+            <FaqItem
+              question="What is Section 125?"
+              answer="Section 125 Plans (known as Cafeteria Plans) are IRS-approved employee benefits plans allowing employees to pay for qualified expenses — like health insurance premiums, FSAs, and HSAs — using pre-tax income. It reduces both employee taxable income and employer payroll taxes. Many districts use the Section 125 POP and FSA plans."
+            />
+            <FaqItem
+              question="What is Section 125 MEC?"
+              answer="This more recent iteration arose from the MEC Plan (Minimum Essential Care) requirement under ACA. The MEC plan is a low-cost, preventative-focused health plan that meets the Affordable Care Act's (ACA) minimum requirement to offer coverage. The MEC Plan offers zero-net cost benefits that employees and their families can use daily. Windward Financial offers the CHAMP Plan version of Section 125 MEC Plan."
+            />
+            <FaqItem
+              question="Is Section 125 MEC Free?"
+              answer="No. There is a fee built into the Plan. Therefore, instead of the FICA savings being, say $75 per person per month, the savings are $42 per person per month. More accurately, the Plan is &quot;net zero&quot; cost."
+            />
+            <FaqItem
+              question="What are the benefits under Section 125 MEC for the employee?"
+              answer={
+                <div>
+                  <p className="mb-3">The CHAMP MEC plan is designed to provide daily essential coverage, focusing heavily on preventative care and limited to no net cost benefits:</p>
+                  <ul className="space-y-2 ml-1">
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span><strong>Preventive Services:</strong> Annual check-ups, vaccinations, and screenings</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span><strong>Wellness Benefits:</strong> Programs designed for preventive care</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span><strong>Limited Primary Care:</strong> Access to primary care services for employees without cost</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span><strong>Telehealth:</strong> Free virtual doctor visits for spouse and family members based on age</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Some prescription drugs with zero co-pay</span></li>
+                  </ul>
+                </div>
+              }
+            />
+            <FaqItem
+              question="What are the benefits to the employer?"
+              answer="Assuming that major medical utilization results in increased premiums, the Section 125 MEC can reduce utilization by shifting care to the zero-net cost MEC benefits. Assuming the plan benefit is 1K, the FICA savings of approximately $500 per month per full-time employee earning $14,400 per year."
+            />
+            <FaqItem
+              question="Who can benefit from Section 125 MEC?"
+              answer={
+                <div>
+                  <p className="mb-3">A Section 125 MEC Plan would be well received by:</p>
+                  <ul className="space-y-2 ml-1">
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Employees who do not qualify for employer medical plans</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Employees without a PCP</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Employees and families concerned about co-pay costs</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Employees and family who travel or live outside of the PCP coverage areas</span></li>
+                  </ul>
+                </div>
+              }
+            />
+            <FaqItem
+              question="Does Section 125 MEC replace the district's major medical plan?"
+              answer={
+                <div>
+                  <p className="mb-3"><strong>No.</strong> The CHAMP Plan does not replace comprehensive medical care; the MEC plan is designed to enhance traditional employer-sponsored care. The MEC plan does not offer the following:</p>
+                  <ul className="space-y-2 ml-1">
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Specialist visits</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Elective procedures</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Some prescription drugs (often excluded in employer-sponsored preventive-only MEC plans)</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>Hospitalization</span></li>
+                  </ul>
+                </div>
+              }
+            />
+            <FaqItem
+              question="Does Section 125 MEC replace the current Section 125 Plan?"
+              answer="No. Many districts are familiar with Section 125 Plans such as the Premium Only Plan and Flex Savings Account. The MEC plan iteration of the Section 125 plan is designed to enhance the POP and FSA plans by providing additional health and preventative care benefits."
+            />
+            <FaqItem
+              question="What is the impact of Section 125 on future Social Security and Medicare benefits?"
+              answer={
+                <div>
+                  <p className="mb-3">The impact is modest for the following reasons:</p>
+                  <ul className="space-y-2 ml-1">
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>The percentage of FICA reduction is small compared to the full FICA tax amount</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>The "lost" FICA reduction is recaptured when salary increases occur later</span></li>
+                    <li className="flex items-start gap-2"><span className="text-primary mt-1">&#x2022;</span> <span>The person usually sees an increase in take-home pay, allowing for after-tax investments (Roth), after-tax foundation savings (401A), or pre-tax 403b contributions</span></li>
+                  </ul>
+                </div>
+              }
+            />
+            <FaqItem
+              question="Is Section 125 mandatory participation?"
+              answer="All employees are automatically enrolled in the Plan, but they can opt out if they wish."
+            />
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="section-padding bg-primary-dark">
         <div className="container-narrow mx-auto text-center">
@@ -181,5 +275,26 @@ export default function Section125() {
         </div>
       </section>
     </div>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: React.ReactNode }) {
+  return (
+    <details className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <summary className="flex items-center justify-between cursor-pointer px-6 py-5 text-left hover:bg-sand/50 transition">
+        <h3 className="font-heading text-lg text-primary-dark pr-4">{question}</h3>
+        <svg
+          className="w-5 h-5 text-primary shrink-0 transition-transform group-open:rotate-180"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      <div className="px-6 pb-5 text-gray-600 leading-relaxed">
+        {typeof answer === 'string' ? <p>{answer}</p> : answer}
+      </div>
+    </details>
   );
 }
