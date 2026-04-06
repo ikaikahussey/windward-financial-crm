@@ -29,7 +29,7 @@ export default function About() {
         <div className="container-wide mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="font-heading text-4xl md:text-5xl text-white mb-4">About Windward Financial</h1>
           <p className="text-primary-light/80 text-xl max-w-2xl">
-            A family legacy of service to Hawaii's public employees.
+            A family legacy of service to public employees — rooted in Hawaiʻi, growing across the West.
           </p>
         </div>
       </section>
@@ -40,19 +40,16 @@ export default function About() {
           <h2 className="font-heading text-3xl md:text-4xl text-primary-dark mb-8">Our History</h2>
           <div className="space-y-6 text-gray-700 leading-relaxed text-lg">
             <p>
-              Windward Financial's story begins in 1990 when <strong>Herb Hussey</strong> started his career in financial services, dedicating himself to helping Hawaii's public employees plan for their futures. With a deep understanding of the unique benefits available to teachers, state workers, and county employees, Herb built lasting relationships based on trust and personalized service.
+              <strong>Herbert Hussey</strong> began his career in the retirement planning industry at American Savings Bank as the 403(b) specialist serving Hawaii's Department of Education teachers in 1990. Assigned to the island of Kauaʻi, Herb spent five years guiding several hundred educators through their retirement planning. Recognizing the growing need for trusted guidance on Medicare and retirement, he expanded his reach statewide. After fifteen years at American Savings Bank, Herb felt a deep personal commitment to continue serving his community.
             </p>
             <p>
-              In <strong>2005</strong>, Herb founded Windward Financial with the mission of providing honest, transparent financial guidance to the families who serve our communities. The company was built on four pillars: <em>honesty, communication, trust, and expertise</em>.
+              In <strong>2005</strong>, he founded Windward Financial LLC — rooted in Hawaiʻi, built on relationships, and dedicated to the educators and public servants who give so much to their communities. The company was built on four pillars: <em>honesty, communication, trust, and expertise</em>. What began as a Hawaii-focused practice has grown naturally: today Windward Financial serves state and county employees, educators, and public servants across Hawaii, California, Oregon, and Washington, with a team of well-qualified agents that includes Herb's own sons.
             </p>
             <p>
-              When the <strong>COVID-19 pandemic</strong> disrupted traditional ways of doing business, Windward Financial pivoted quickly -- embracing virtual consultations and digital tools to continue serving clients without interruption. This adaptability strengthened the company and expanded its reach across the Hawaiian islands.
+              Before COVID, our agents visited schools and worksites in person across every state we serve. Since the pandemic, Windward Financial has embraced virtual education — hosting regular Zoom workshops to keep public employees up to date on their state retirement systems, Medicare integration, and benefit options, no matter where they live or work.
             </p>
             <p>
               The partnership with <strong>Wes Machida</strong> brought additional depth to the team. With his background in public finance and deep roots in the Hawaii community, Wes complemented Herb's insurance and retirement planning expertise, creating a comprehensive resource for public employees at every stage of their careers.
-            </p>
-            <p>
-              Today, Windward Financial continues its mission as a family-owned company, serving thousands of public employees across Hawaii with the same personal touch and commitment to excellence that Herb established over three decades ago.
             </p>
           </div>
         </div>
@@ -68,7 +65,7 @@ export default function About() {
               { year: '2005', text: 'Windward Financial is founded with a mission of honest, personalized financial guidance' },
               { year: '2020', text: 'Successfully pivots to virtual consultations during COVID-19, expanding statewide reach' },
               { year: '2021', text: 'Wes Machida joins, bringing public finance expertise and strengthening the team' },
-              { year: 'Today', text: 'Continuing to serve thousands of Hawaii public employees with trusted financial guidance' },
+              { year: 'Today', text: 'Serving public employees across Hawaii, California, Oregon, and Washington with trusted financial guidance' },
             ].map(({ year, text }) => (
               <div key={year} className="flex gap-6 items-start">
                 <div className="shrink-0 w-20 text-right">
@@ -87,7 +84,7 @@ export default function About() {
         <div className="container-wide mx-auto">
           <h2 className="font-heading text-3xl md:text-4xl text-primary-dark mb-4 text-center">Our Team</h2>
           <p className="text-gray-600 text-lg text-center mb-12 max-w-2xl mx-auto">
-            Meet the dedicated professionals who make Windward Financial the trusted partner for Hawaii's public employees.
+            Meet the dedicated professionals who make Windward Financial the trusted partner for public employees across the states we serve.
           </p>
 
           {loading ? (

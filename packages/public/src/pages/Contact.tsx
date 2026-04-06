@@ -66,7 +66,10 @@ export default function Contact() {
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Contact Info */}
             <div>
-              <h2 className="font-heading text-2xl text-primary-dark mb-6">Get in Touch</h2>
+              <h2 className="font-heading text-2xl text-primary-dark mb-4">Get in Touch</h2>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Windward Financial is a family-owned firm specializing in retirement planning for state and county employees, educators, and public servants. We currently serve clients in Hawaii, California, Oregon, and Washington.
+              </p>
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center shrink-0">

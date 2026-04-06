@@ -65,7 +65,7 @@ export default function Home() {
               Windward Financial
             </h1>
             <p className="text-xl md:text-2xl text-primary-light/90 mb-4 font-light leading-relaxed">
-              A family-owned financial services company proudly serving Hawaii's public employees since 1990.
+              A family-owned financial services company serving educators, public school employees, and state and county workers across Hawaii, California, Oregon, and Washington since 1990.
             </p>
             <p className="text-lg text-primary-light/70 mb-10">
               Retirement planning, insurance, annuities, and 403(b) plans tailored to your needs.
@@ -93,7 +93,7 @@ export default function Home() {
           <div className="text-center mb-14">
             <h2 className="font-heading text-3xl md:text-4xl text-primary-dark mb-4">How We Help You</h2>
             <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-              We specialize in financial solutions designed specifically for Hawaii's public employees.
+              We specialize in financial solutions designed for public employees — from the ERS and TRS to PERS and STRS — giving you personalized guidance wherever you teach or serve.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -194,7 +194,7 @@ export default function Home() {
         <div className="container-narrow mx-auto text-center">
           <h2 className="font-heading text-3xl md:text-4xl text-primary-dark mb-4">Stay Informed</h2>
           <p className="text-gray-600 mb-8 text-lg">
-            Subscribe to our newsletter for retirement planning tips, benefit updates, and financial insights for Hawaii's public employees.
+            Subscribe to our newsletter for retirement planning tips, benefit updates, and financial insights for public employees across the states we serve.
           </p>
           <form onSubmit={handleNewsletterSubmit} className="max-w-md mx-auto flex gap-3">
             <input
