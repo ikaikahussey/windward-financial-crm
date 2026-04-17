@@ -56,7 +56,7 @@ async function seed() {
   //  USERS
   // ══════════════════════════════════════════════
   console.log('Seeding users...');
-  const [herbUser, kealakaiUser, adminUser] = await db
+  const [herbUser, kealakaiUser, adminUser, tiffUser, mayUser, brittanyUser, ikaikaUser] = await db
     .insert(users)
     .values([
       {
@@ -79,10 +79,34 @@ async function seed() {
         passwordHash: hash('admin123'),
         role: 'admin',
       },
+      {
+        name: 'Tiff',
+        email: 'tiff@windwardfinancial.net',
+        passwordHash: hash('windward2024'),
+        role: 'admin',
+      },
+      {
+        name: 'May',
+        email: 'may@windwardfinancial.net',
+        passwordHash: hash('windward2024'),
+        role: 'admin',
+      },
+      {
+        name: 'Brittany',
+        email: 'brittany@windwardfinancial.net',
+        passwordHash: hash('windward2024'),
+        role: 'admin',
+      },
+      {
+        name: 'Ikaika',
+        email: 'ikaika@windwardfinancial.net',
+        passwordHash: hash('windward2024'),
+        role: 'admin',
+      },
     ])
     .returning();
 
-  console.log(`  Created ${3} users.\n`);
+  console.log(`  Created ${7} users.\n`);
 
   // ══════════════════════════════════════════════
   //  TEAM MEMBERS
