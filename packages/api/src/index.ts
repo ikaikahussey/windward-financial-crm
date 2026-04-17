@@ -28,9 +28,25 @@ const PORT = parseInt(process.env.PORT || '3001');
 // Trust Railway's reverse proxy (needed for secure cookies)
 app.set('trust proxy', 1);
 
-// CORS
+// CORS — PUBLIC_URL and ADMIN_URL may each be a comma-separated list of
+// allowed origins (e.g. both the Railway-assigned URL and the custom domain).
+const splitOrigins = (value: string | undefined): string[] =>
+  (value || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const allowedOrigins = [
+  ...splitOrigins(process.env.PUBLIC_URL),
+  ...splitOrigins(process.env.ADMIN_URL),
+];
+
 app.use(cors({
-  origin: [process.env.PUBLIC_URL, process.env.ADMIN_URL].filter(Boolean) as string[],
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 
