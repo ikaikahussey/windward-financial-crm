@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       service:
-        description: 'Service to redeploy'
+        description: 'Service to target'
         required: true
         default: 'api'
         type: choice
@@ -23,11 +23,12 @@ on:
       action:
         description: 'Action'
         required: true
-        default: 'redeploy'
+        default: 'logs'
         type: choice
         options:
-          - redeploy
           - logs
+          - redeploy
+          - up
 
 concurrency:
   group: railway-deploy
@@ -36,20 +37,29 @@ concurrency:
 env:
   RAILWAY_PROJECT_ID: 6fbf7793-fe4e-4225-82c0-54defd227c2c
   RAILWAY_ENVIRONMENT_NAME: production
+  STATUS_ISSUE_TITLE: 'Railway Deploy Status'
+  STATUS_ISSUE_LABEL: 'deploy-status'
 
 jobs:
   deploy:
-    name: Deploy ${{ github.event.inputs.service || 'api' }}
+    name: ${{ github.event.inputs.action || 'auto' }} ${{ github.event.inputs.service || 'api' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     env:
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Verify RAILWAY_TOKEN secret
         run: |
           if [ -z "$RAILWAY_API_TOKEN" ]; then
-            echo "::error::RAILWAY_TOKEN secret is not set. Add an account token at https://railway.com/account/tokens, then repo Settings -> Secrets and variables -> Actions -> New secret named RAILWAY_TOKEN."
+            echo "::error::RAILWAY_TOKEN secret is not set. Add an account token at https://railway.com/account/tokens."
             exit 1
           fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli@latest
@@ -59,8 +69,6 @@ jobs:
         run: |
           SVC="${{ github.event.inputs.service || 'api' }}"
           if [ "${{ github.event_name }}" = "push" ]; then
-            # Auto-deploys on push only redeploy the api (backend behavior
-            # changes). Static sites can be redeployed manually via dispatch.
             SVC="api"
           fi
           if [ "$SVC" = "all" ]; then
@@ -68,43 +76,106 @@ jobs:
           else
             echo "services=$SVC" >> "$GITHUB_OUTPUT"
           fi
+          ACT="${{ github.event.inputs.action || 'auto' }}"
+          echo "action=$ACT" >> "$GITHUB_OUTPUT"
 
-      - name: Redeploy services
-        if: ${{ github.event.inputs.action != 'logs' }}
+      - name: Redeploy (re-run last build)
+        if: ${{ steps.targets.outputs.action == 'redeploy' }}
         run: |
           set -e
           for svc in ${{ steps.targets.outputs.services }}; do
-            echo "::group::Link + redeploy $svc"
-            railway link \
-              --project "$RAILWAY_PROJECT_ID" \
-              --environment "$RAILWAY_ENVIRONMENT_NAME" \
-              --service "$svc"
+            echo "::group::Redeploy $svc"
+            railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc"
             railway redeploy --service "$svc" --yes
             echo "::endgroup::"
           done
 
-      - name: Tail build + deployment logs
-        if: ${{ always() }}
+      - name: Up (push current code as new build)
+        if: ${{ steps.targets.outputs.action == 'up' }}
         run: |
+          set -e
           for svc in ${{ steps.targets.outputs.services }}; do
-            railway link \
-              --project "$RAILWAY_PROJECT_ID" \
-              --environment "$RAILWAY_ENVIRONMENT_NAME" \
-              --service "$svc" || continue
-
-            echo "::group::Build logs: $svc"
-            railway logs \
-              --service "$svc" \
-              --environment "$RAILWAY_ENVIRONMENT_NAME" \
-              --build \
-              --lines 300 2>&1 || echo "(no build logs available)"
-            echo "::endgroup::"
-
-            echo "::group::Deployment logs: $svc"
-            railway logs \
-              --service "$svc" \
-              --environment "$RAILWAY_ENVIRONMENT_NAME" \
-              --deployment \
-              --lines 300 2>&1 || echo "(no deployment logs available)"
+            echo "::group::Up $svc"
+            railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc"
+            railway up --service "$svc" --ci
             echo "::endgroup::"
           done
+
+      - name: Wait for Railway build to progress
+        if: ${{ github.event_name == 'push' || steps.targets.outputs.action != 'logs' }}
+        run: sleep 60
+
+      - name: Collect logs to file
+        id: collect
+        if: ${{ always() }}
+        run: |
+          mkdir -p /tmp/railway-logs
+          LOG_FILE="/tmp/railway-logs/combined.md"
+          {
+            echo "## Railway deploy log"
+            echo ""
+            echo "- **Run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo "- **Trigger:** ${{ github.event_name }}${{ github.event.inputs.action && format(' / {0}', github.event.inputs.action) || '' }}"
+            echo "- **Services:** ${{ steps.targets.outputs.services }}"
+            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) — ${{ github.event.head_commit.message && github.event.head_commit.message || 'n/a' }}"
+            echo "- **Actor:** @${{ github.actor }}"
+            echo ""
+          } > "$LOG_FILE"
+
+          for svc in ${{ steps.targets.outputs.services }}; do
+            railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc" || continue
+
+            {
+              echo "### ${svc} — build logs"
+              echo ""
+              echo '```'
+              railway logs --service "$svc" --environment "$RAILWAY_ENVIRONMENT_NAME" --build --lines 200 2>&1 | tail -200 || echo "(no build logs available)"
+              echo '```'
+              echo ""
+              echo "### ${svc} — deployment logs"
+              echo ""
+              echo '```'
+              railway logs --service "$svc" --environment "$RAILWAY_ENVIRONMENT_NAME" --deployment --lines 200 2>&1 | tail -200 || echo "(no deployment logs available)"
+              echo '```'
+              echo ""
+            } >> "$LOG_FILE"
+          done
+
+          echo "log_file=$LOG_FILE" >> "$GITHUB_OUTPUT"
+          echo "::group::Collected log preview"
+          head -80 "$LOG_FILE"
+          echo "::endgroup::"
+
+      - name: Ensure deploy-status issue exists
+        id: issue
+        if: ${{ always() }}
+        run: |
+          ISSUE_NUMBER=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label "$STATUS_ISSUE_LABEL" \
+            --search "$STATUS_ISSUE_TITLE in:title" \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -z "$ISSUE_NUMBER" ]; then
+            gh label create "$STATUS_ISSUE_LABEL" \
+              --repo "$GITHUB_REPOSITORY" \
+              --color FFA500 \
+              --description "Automated Railway deploy log comments" 2>/dev/null || true
+            ISSUE_NUMBER=$(gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$STATUS_ISSUE_TITLE" \
+              --label "$STATUS_ISSUE_LABEL" \
+              --body "Automated tracking issue for Railway deploy runs. Each workflow run appends a comment here with build + deployment logs so they're readable via the GitHub API. Do not close." \
+              --json number \
+              --jq '.number')
+          fi
+          echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Post logs as issue comment
+        if: ${{ always() && steps.issue.outputs.number != '' && steps.collect.outputs.log_file != '' }}
+        run: |
+          gh issue comment "${{ steps.issue.outputs.number }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --body-file "${{ steps.collect.outputs.log_file }}"
