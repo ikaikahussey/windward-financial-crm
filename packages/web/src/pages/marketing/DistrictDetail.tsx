@@ -355,7 +355,9 @@ export default function MarketingDistrictDetail() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800">{contact.firstName} {contact.lastName}</span>
                     {contact.verifiedAt && (
-                      <CheckCircle className="h-3.5 w-3.5 text-green-500" title="Verified" />
+                      <span title="Verified">
+                        <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                      </span>
                     )}
                   </div>
                   {contact.title && (
