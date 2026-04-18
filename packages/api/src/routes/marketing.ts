@@ -71,6 +71,48 @@ router.get('/districts', async (req: Request, res: Response) => {
   }
 });
 
+// POST /districts — manually create a single district
+router.post('/districts', async (req: Request, res: Response) => {
+  try {
+    const {
+      employerName,
+      city,
+      county,
+      state,
+      groupType,
+      classificationSource,
+      productionStatus,
+      planAdminName,
+    } = req.body ?? {};
+
+    if (!employerName || typeof employerName !== 'string' || !employerName.trim()) {
+      return res.status(400).json({ error: 'employerName is required' });
+    }
+    if (state && typeof state === 'string' && state.length > 2) {
+      return res.status(400).json({ error: 'state must be a 2-letter code' });
+    }
+    if (productionStatus && productionStatus !== 'Dormant' && productionStatus !== 'Low Prod') {
+      return res.status(400).json({ error: "productionStatus must be 'Dormant' or 'Low Prod'" });
+    }
+
+    const [district] = await db.insert(districts).values({
+      employerName: employerName.trim(),
+      city: city?.trim() || null,
+      county: county?.trim() || null,
+      state: state ? (state as string).trim().toUpperCase() : null,
+      groupType: groupType?.trim() || null,
+      classificationSource: classificationSource?.trim() || null,
+      productionStatus: (productionStatus as 'Dormant' | 'Low Prod') || null,
+      planAdminName: planAdminName?.trim() || null,
+    }).returning();
+
+    return res.status(201).json(district);
+  } catch (error) {
+    console.error('Create district error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /districts/upload-csv — bulk import from CSV
 router.post('/districts/upload-csv', upload.single('file'), async (req: Request, res: Response) => {
   try {
