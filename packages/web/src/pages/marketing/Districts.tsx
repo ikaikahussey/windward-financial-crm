@@ -4,7 +4,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   Upload, Search, ChevronLeft, ChevronRight, UserSearch, Mail, Send,
-  CheckCircle, Circle, Loader2, X, Edit2, Eye, AlertTriangle, Check,
+  CheckCircle, Circle, Loader2, X, Edit2, Eye, AlertTriangle, Check, Plus,
 } from 'lucide-react';
 
 interface DistrictContact {
@@ -140,6 +140,9 @@ export default function MarketingDistricts() {
   // Campaign creation state
   const [campaignResult, setCampaignResult] = useState<{ campaignId: number; districtsEnrolled: number } | null>(null);
 
+  // Add District modal state
+  const [showAddDistrict, setShowAddDistrict] = useState(false);
+
   function getRowState(districtId: number): RowState {
     return rowStates[districtId] || {
       step: 'district',
@@ -234,6 +237,85 @@ export default function MarketingDistricts() {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  }
+
+  async function handleCreateDistrict(
+    payload: DistrictFormValues,
+    opts: { autoSelect: boolean; autoSearch: boolean }
+  ) {
+    const created = await api.post<District>('/api/marketing/districts', payload);
+    await loadAsync();
+    if (opts.autoSelect) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        next.add(created.id);
+        return next;
+      });
+    }
+    if (opts.autoSearch) {
+      updateRowState(created.id, { step: 'searching' });
+      try {
+        const resp = await api.post<{ districtId: number; status: string; contact?: DistrictContact }>(
+          `/api/marketing/districts/${created.id}/search-contact`
+        );
+        if (resp.status === 'found' && resp.contact) {
+          updateRowState(created.id, {
+            step: 'contact_found',
+            contact: resp.contact,
+            editFields: {
+              firstName: resp.contact.firstName,
+              lastName: resp.contact.lastName,
+              title: resp.contact.title,
+              email: resp.contact.email,
+            },
+          });
+        } else {
+          updateRowState(created.id, { step: 'contact_missing' });
+        }
+      } catch {
+        updateRowState(created.id, { step: 'district' });
+      }
+    }
+    return created;
+  }
+
+  function loadAsync(): Promise<void> {
+    return new Promise((resolve) => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      if (search) params.set('search', search);
+      if (stateFilter) params.set('state', stateFilter);
+      if (statusFilter) params.set('production_status', statusFilter);
+      api.get<{ data: District[]; pagination: { totalPages: number } }>(`/api/marketing/districts?${params}`)
+        .then((d) => {
+          const rows = d.data || [];
+          setDistricts(rows);
+          setTotalPages(d.pagination?.totalPages || 1);
+          setRowStates(prev => {
+            const next = { ...prev };
+            for (const district of rows) {
+              if (!next[district.id]) {
+                next[district.id] = {
+                  step: district.contact ? 'contact_found' : 'district',
+                  contact: district.contact,
+                  editingContact: false,
+                  editFields: {
+                    firstName: district.contact?.firstName || '',
+                    lastName: district.contact?.lastName || '',
+                    title: district.contact?.title || '',
+                    email: district.contact?.email || '',
+                  },
+                  showEmailPreview: false,
+                };
+              }
+            }
+            return next;
+          });
+        })
+        .catch(() => setDistricts([]))
+        .finally(() => { setLoading(false); resolve(); });
+    });
   }
 
   // ── Selection ──
@@ -433,6 +515,13 @@ export default function MarketingDistricts() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-primary-dark">Section 125 Campaign Builder</h1>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddDistrict(true)}
+            className="flex items-center gap-2 bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
+          >
+            <Plus className="h-4 w-4" />
+            Add District
+          </button>
           <input ref={fileInputRef} type="file" accept=".csv" onChange={handleCsvUpload} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -773,6 +862,14 @@ export default function MarketingDistricts() {
           onClose={() => setEmailEditorModal(null)}
         />
       )}
+
+      {/* Add District Modal */}
+      {showAddDistrict && (
+        <AddDistrictModal
+          onSubmit={handleCreateDistrict}
+          onClose={() => setShowAddDistrict(false)}
+        />
+      )}
     </div>
   );
 }
@@ -980,6 +1077,275 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
       {children}
+    </div>
+  );
+}
+
+// ── Add District Modal ──────────────────────────────────────────────────────
+interface DistrictFormValues {
+  employerName: string;
+  city: string;
+  county: string;
+  state: string;
+  groupType: string;
+  classificationSource: string;
+  productionStatus: 'Dormant' | 'Low Prod';
+  planAdminName: string;
+}
+
+const EMPTY_DISTRICT_FORM: DistrictFormValues = {
+  employerName: '',
+  city: '',
+  county: '',
+  state: '',
+  groupType: '',
+  classificationSource: '',
+  productionStatus: 'Dormant',
+  planAdminName: '',
+};
+
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA',
+  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM',
+  'NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA',
+  'WV','WI','WY',
+];
+
+function AddDistrictModal({
+  onSubmit, onClose,
+}: {
+  onSubmit: (payload: DistrictFormValues, opts: { autoSelect: boolean; autoSearch: boolean }) => Promise<unknown>;
+  onClose: () => void;
+}) {
+  const [rows, setRows] = useState<DistrictFormValues[]>([{ ...EMPTY_DISTRICT_FORM }]);
+  const [autoSelect, setAutoSelect] = useState(true);
+  const [autoSearch, setAutoSearch] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+
+  function updateRow(index: number, patch: Partial<DistrictFormValues>) {
+    setRows(prev => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  function addRow() {
+    setRows(prev => [...prev, { ...EMPTY_DISTRICT_FORM }]);
+  }
+
+  function removeRow(index: number) {
+    setRows(prev => prev.length <= 1 ? prev : prev.filter((_, i) => i !== index));
+  }
+
+  const validRows = rows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.employerName.trim().length > 0);
+  const canSubmit = validRows.length > 0 && !submitting;
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setError(null);
+    setSubmitting(true);
+    setProgress({ done: 0, total: validRows.length });
+    try {
+      let done = 0;
+      for (const { r } of validRows) {
+        await onSubmit(
+          {
+            ...r,
+            employerName: r.employerName.trim(),
+            city: r.city.trim(),
+            county: r.county.trim(),
+            state: r.state.trim().toUpperCase(),
+            groupType: r.groupType.trim(),
+            classificationSource: r.classificationSource.trim(),
+            planAdminName: r.planAdminName.trim(),
+          },
+          { autoSelect, autoSearch },
+        );
+        done += 1;
+        setProgress({ done, total: validRows.length });
+      }
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create district');
+    } finally {
+      setSubmitting(false);
+      setProgress(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3" onClick={submitting ? undefined : onClose}>
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
+          <div>
+            <h2 className="font-bold text-primary-dark">Add District{rows.length > 1 ? 's' : ''}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Manually enter one or more districts to feed into the Section 125 automated workflow.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} disabled={submitting}>
+            <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {rows.map((row, index) => (
+            <div key={index} className="border border-sand-dark rounded-xl p-4 bg-sand/30">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  District {index + 1}
+                </span>
+                {rows.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeRow(index)}
+                    className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                  >
+                    <X className="h-3.5 w-3.5" /> Remove
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Field label="Employer / District Name *">
+                  <input
+                    required
+                    value={row.employerName}
+                    onChange={e => updateRow(index, { employerName: e.target.value })}
+                    placeholder="e.g. Central Union School District"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+                <Field label="Plan Admin Name">
+                  <input
+                    value={row.planAdminName}
+                    onChange={e => updateRow(index, { planAdminName: e.target.value })}
+                    placeholder="Who administers the plan"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+                <Field label="City">
+                  <input
+                    value={row.city}
+                    onChange={e => updateRow(index, { city: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+                <Field label="County">
+                  <input
+                    value={row.county}
+                    onChange={e => updateRow(index, { county: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+                <Field label="State">
+                  <select
+                    value={row.state}
+                    onChange={e => updateRow(index, { state: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                  >
+                    <option value="">Select state…</option>
+                    {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </Field>
+                <Field label="Group Type">
+                  <input
+                    value={row.groupType}
+                    onChange={e => updateRow(index, { groupType: e.target.value })}
+                    placeholder="e.g. School District"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+                <Field label="Production Status">
+                  <select
+                    value={row.productionStatus}
+                    onChange={e => updateRow(index, { productionStatus: e.target.value as 'Dormant' | 'Low Prod' })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                  >
+                    <option value="Dormant">Dormant</option>
+                    <option value="Low Prod">Low Prod</option>
+                  </select>
+                </Field>
+                <Field label="Classification Source">
+                  <input
+                    value={row.classificationSource}
+                    onChange={e => updateRow(index, { classificationSource: e.target.value })}
+                    placeholder="How this district was identified"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </Field>
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addRow}
+            className="w-full border border-dashed border-primary/40 text-primary rounded-xl py-2.5 text-sm font-medium hover:bg-primary/5 transition flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" /> Add another district
+          </button>
+
+          <div className="rounded-xl border border-sand-dark bg-white p-3 space-y-2">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={autoSelect}
+                onChange={e => setAutoSelect(e.target.checked)}
+                className="rounded border-gray-300 text-primary focus:ring-primary/30"
+              />
+              Select these districts after creating
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={autoSearch}
+                onChange={e => setAutoSearch(e.target.checked)}
+                className="rounded border-gray-300 text-primary focus:ring-primary/30"
+              />
+              Immediately kick off the superintendent contact search (automated workflow step 1)
+            </label>
+          </div>
+
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-gray-200 shrink-0">
+          <div className="text-xs text-gray-500">
+            {progress
+              ? `Creating ${progress.done} of ${progress.total}…`
+              : `${validRows.length} ${validRows.length === 1 ? 'district' : 'districts'} ready to create`}
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="px-5 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark transition font-semibold disabled:opacity-50 flex items-center gap-2"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {submitting ? 'Creating…' : 'Create District' + (validRows.length > 1 ? 's' : '')}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
