@@ -32,8 +32,8 @@ export default function Settings() {
 
 function GeneralSettings() {
   const [form, setForm] = useState({
-    company_name: 'Windward Financial Group',
-    company_phone: '',
+    company_name: 'Windward Financial',
+    company_phone: '(888) 894-1884',
     scheduling_link: '',
     smtp_host: '',
     smtp_port: '587',
@@ -48,7 +48,7 @@ function GeneralSettings() {
   useEffect(() => {
     api.get<any>('/api/settings/general').then((d) => {
       if (d) setForm((prev) => ({ ...prev, ...d }));
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   async function handleSubmit(e: FormEvent) {
@@ -58,7 +58,7 @@ function GeneralSettings() {
       await api.patch('/api/settings/general', form);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch {}
+    } catch { }
     setSaving(false);
   }
 
@@ -300,8 +300,8 @@ function QuoSettings() {
     api.get<any>('/api/settings/quo').then((d) => {
       if (d?.api_key) setApiKey(d.api_key);
       if (d?.phone_assignments) setPhoneAssignments(d.phone_assignments);
-    }).catch(() => {});
-    api.get<{ users: User[] }>('/api/users').then((d) => setAgents(d.users || [])).catch(() => {});
+    }).catch(() => { });
+    api.get<{ users: User[] }>('/api/users').then((d) => setAgents(d.users || [])).catch(() => { });
   }, []);
 
   async function testConnection() {
@@ -334,7 +334,7 @@ function QuoSettings() {
     setSaving(true);
     try {
       await api.patch('/api/settings/quo', { api_key: apiKey, phone_assignments: phoneAssignments });
-    } catch {}
+    } catch { }
     setSaving(false);
   }
 
