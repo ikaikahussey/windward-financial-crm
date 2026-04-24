@@ -1,0 +1,25 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Home, { type Testimonial } from '../components/pages/Home.tsx';
+
+const page = await getEntry('pages', 'home');
+const title = page?.data.title ?? 'Home';
+const metaDescription = page?.data.metaDescription;
+
+const rawTestimonials = await getCollection('testimonials', ({ data }) => data.published !== false);
+rawTestimonials.sort((a, b) => a.data.displayOrder - b.data.displayOrder);
+
+const testimonials: Testimonial[] = rawTestimonials.map((t) => ({
+  id: t.slug,
+  name: t.data.authorName,
+  role: t.data.authorDescription,
+  quote: t.body.trim(),
+}));
+
+const nlgLoginUrl = import.meta.env.PUBLIC_NLG_LOGIN_URL || 'https://www.nationallife.com/login';
+---
+
+<BaseLayout title={title} description={metaDescription}>
+  <Home client:load testimonials={testimonials} nlgLoginUrl={nlgLoginUrl} />
+</BaseLayout>

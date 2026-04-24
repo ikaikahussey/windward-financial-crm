@@ -192,91 +192,33 @@ export interface SmsMessage {
   created_at: string;
 }
 
-export interface SitePage {
-  id: string;
-  slug: string;
-  title: string;
-  content: string;
-  meta_title?: string;
-  meta_description?: string;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Testimonial {
-  id: string;
-  author_name: string;
-  author_title?: string;
-  body: string;
-  rating?: number;
-  is_featured: boolean;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TeamMember {
-  id: string;
-  name: string;
-  title: string;
-  bio?: string;
-  photo_url?: string;
-  email?: string;
-  phone?: string;
-  display_order: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Event {
-  id: string;
+  id: number;
   title: string;
-  description?: string;
+  description: string;
+  eventDate: string;
+  endDate?: string;
   location?: string;
-  start_date: string;
-  end_date?: string;
-  is_published: boolean;
-  max_attendees?: number;
-  registration_count?: number;
-  created_at: string;
-  updated_at: string;
+  zoomLink?: string;
+  registrationRequired: boolean;
+  maxAttendees?: number;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface EventRegistration {
-  id: string;
-  event_id: string;
-  name: string;
+  id: number;
+  eventId: number;
+  contactId?: number;
+  firstName: string;
+  lastName: string;
   email: string;
   phone?: string;
-  created_at: string;
-}
-
-export interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt?: string;
-  body: string;
-  author_id?: string;
-  author?: User;
-  tags?: string[];
-  featured_image_url?: string;
-  is_published: boolean;
-  published_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Subscriber {
-  id: string;
-  email: string;
-  name?: string;
-  source?: string;
-  is_active: boolean;
-  subscribed_at: string;
-  unsubscribed_at?: string;
+  employmentType?: string;
+  employerSchool?: string;
+  registeredAt: string;
+  attended?: boolean;
 }
 
 export interface DashboardStats {

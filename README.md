@@ -4,9 +4,19 @@ A full-stack application for **Windward Financial**, a Hawaiʻi-based insurance 
 
 The system has **two frontends** sharing **one backend**:
 
-- **Public Website** (`packages/public`) — Customer-facing marketing site replacing the existing windward.financial Squarespace site. Every form submission creates a lead in the CRM.
-- **Admin CRM** (`packages/web`) — Internal tool for the 5-person team to manage contacts, pipeline, policies, communications, and automation.
-- **API** (`packages/api`) — Node.js/Express backend serving both frontends.
+- **Public Website** (`packages/public`) — Astro static site replacing the existing windward.financial Squarespace site. 10 static pages (12 routes including dynamic `/events/[id]`). Every form submission still creates a lead in the CRM via the API; otherwise page loads do zero runtime API calls.
+- **Admin CRM** (`packages/web`) — React + Vite internal tool for the team to manage contacts, pipeline, policies, communications, automation, and events.
+- **API** (`packages/api`) — Node.js/Express backend serving the forms and the admin CRM. Writes trigger an optional rebuild webhook so the static public site picks up changes.
+
+### Content architecture
+
+- **Operational data** (contacts, policies, tasks, events, registrations, newsletter subscribers, call/SMS logs, marketing campaigns) lives in **Postgres** — 15 core tables plus the marketing module.
+- **Structural content** (pages, testimonials, team members) lives in **Markdown** with frontmatter under `packages/public/src/content/`, validated by Astro Content Collections + Zod. Editing currently happens by pull request.
+- **Pending decision:** a non-developer editing tool (most likely [Decap CMS](https://decapcms.org)) has been deferred and is not yet wired up. For now, content edits go through a code change.
+
+### Recent refactor
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for the complete list of what was removed (blog, CMS tables and routes), migrated (public site → Astro, pages/testimonials/team → Markdown), and added (admin Events page, rebuild webhook).
 
 ---
 

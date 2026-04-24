@@ -242,44 +242,7 @@ export const smsMessages = pgTable('sms_messages', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-// ── CMS Tables ──
-
-export const sitePages = pgTable('site_pages', {
-  id: serial('id').primaryKey(),
-  slug: text('slug').notNull().unique(),
-  title: text('title').notNull(),
-  metaDescription: text('meta_description'),
-  heroImageUrl: text('hero_image_url'),
-  content: json('content').$type<ContentBlock[]>(),
-  isPublished: boolean('is_published').notNull().default(true),
-  sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
-export const testimonials = pgTable('testimonials', {
-  id: serial('id').primaryKey(),
-  clientName: text('client_name').notNull(),
-  clientTitle: text('client_title'),
-  body: text('body').notNull(),
-  isFeatured: boolean('is_featured').notNull().default(false),
-  sortOrder: integer('sort_order').notNull().default(0),
-  isPublished: boolean('is_published').notNull().default(true),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-export const teamMembers = pgTable('team_members', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  role: text('role').notNull(),
-  email: varchar('email', { length: 255 }),
-  phone: varchar('phone', { length: 50 }),
-  photoUrl: text('photo_url'),
-  bio: text('bio'),
-  sortOrder: integer('sort_order').notNull().default(0),
-  isPublished: boolean('is_published').notNull().default(true),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+// ── Events ──
 
 export const events = pgTable('events', {
   id: serial('id').primaryKey(),
@@ -308,22 +271,6 @@ export const eventRegistrations = pgTable('event_registrations', {
   employerSchool: text('employer_school'),
   registeredAt: timestamp('registered_at').defaultNow().notNull(),
   attended: boolean('attended'),
-});
-
-export const blogPosts = pgTable('blog_posts', {
-  id: serial('id').primaryKey(),
-  slug: text('slug').notNull().unique(),
-  title: text('title').notNull(),
-  excerpt: text('excerpt'),
-  body: text('body').notNull(),
-  authorId: integer('author_id').references(() => users.id),
-  featuredImageUrl: text('featured_image_url'),
-  metaDescription: text('meta_description'),
-  tags: text('tags').array(),
-  isPublished: boolean('is_published').notNull().default(false),
-  publishedAt: timestamp('published_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const newsletterSubscribers = pgTable('newsletter_subscribers', {
@@ -467,9 +414,3 @@ export const geoAdCampaigns = pgTable('geo_ad_campaigns', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// ── Types ──
-
-export interface ContentBlock {
-  type: 'text' | 'heading' | 'image' | 'cta' | 'testimonial' | 'team_member' | 'product_card' | 'faq';
-  data: Record<string, unknown>;
-}

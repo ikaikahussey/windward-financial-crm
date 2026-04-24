@@ -1,0 +1,22 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Events, { type Event as EventShape } from '../../components/pages/Events.tsx';
+import { getUpcomingEvents } from '../../lib/events';
+
+const rows = await getUpcomingEvents();
+
+const events: EventShape[] = rows.map((ev) => ({
+  id: ev.id,
+  title: ev.title,
+  description: ev.description,
+  date: ev.eventDate.toISOString(),
+  location: ev.location || '',
+}));
+---
+
+<BaseLayout
+  title="Events"
+  description="Upcoming financial education events and workshops for public employees in Hawaii, California, Oregon, and Washington."
+>
+  <Events client:load events={events} />
+</BaseLayout>

@@ -1,0 +1,11 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Enroll from '../components/pages/Enroll.tsx';
+---
+
+<BaseLayout
+  title="403(b) Enrollment"
+  description="Enroll in a 403(b) retirement savings plan through Windward Financial — step-by-step guidance for Hawaii educators."
+>
+  <Enroll client:load />
+</BaseLayout>
