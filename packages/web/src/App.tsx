@@ -13,12 +13,7 @@ import Appointments from '@/pages/Appointments';
 import Communications from '@/pages/Communications';
 import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
-import CmsPages from '@/pages/cms/Pages';
-import CmsTestimonials from '@/pages/cms/Testimonials';
-import CmsTeam from '@/pages/cms/Team';
-import CmsEvents from '@/pages/cms/Events';
-import CmsBlog from '@/pages/cms/Blog';
-import CmsSubscribers from '@/pages/cms/Subscribers';
+import Events from '@/pages/Events';
 import MarketingDashboard from '@/pages/marketing/Dashboard';
 import MarketingDistricts from '@/pages/marketing/Districts';
 import MarketingCampaigns from '@/pages/marketing/Campaigns';
@@ -63,12 +58,7 @@ export default function App() {
           <Route path="/communications" element={<Communications />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/cms/pages" element={<CmsPages />} />
-          <Route path="/cms/testimonials" element={<CmsTestimonials />} />
-          <Route path="/cms/team" element={<CmsTeam />} />
-          <Route path="/cms/events" element={<CmsEvents />} />
-          <Route path="/cms/blog" element={<CmsBlog />} />
-          <Route path="/cms/subscribers" element={<CmsSubscribers />} />
+          <Route path="/events" element={<Events />} />
           <Route path="/marketing" element={<MarketingDashboard />} />
           <Route path="/marketing/districts" element={<MarketingDistricts />} />
           <Route path="/marketing/districts/:id" element={<MarketingDistrictDetail />} />

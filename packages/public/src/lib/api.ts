@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+const BASE_URL = import.meta.env.PUBLIC_API_URL || '';
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const opts: RequestInit = {
@@ -16,7 +16,5 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return res.json();
 }
 
-export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-};
+export const apiGet = <T>(path: string) => request<T>('GET', path);
+export const apiPost = <T>(path: string, body?: unknown) => request<T>('POST', path, body);

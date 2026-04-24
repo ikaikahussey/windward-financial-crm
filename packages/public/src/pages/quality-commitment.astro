@@ -1,0 +1,13 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import QualityCommitment from '../components/pages/QualityCommitment.tsx';
+
+const page = await getEntry('pages', 'quality-commitment');
+const title = page?.data.title ?? 'Quality Commitment';
+const metaDescription = page?.data.metaDescription;
+---
+
+<BaseLayout title={title} description={metaDescription}>
+  <QualityCommitment client:load />
+</BaseLayout>

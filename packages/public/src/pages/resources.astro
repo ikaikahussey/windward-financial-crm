@@ -1,0 +1,13 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Resources from '../components/pages/Resources.tsx';
+
+const page = await getEntry('pages', 'resources');
+const title = page?.data.title ?? 'Resources';
+const metaDescription = page?.data.metaDescription;
+---
+
+<BaseLayout title={title} description={metaDescription}>
+  <Resources client:load />
+</BaseLayout>

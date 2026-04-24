@@ -1,0 +1,11 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Calculator from '../components/pages/Calculator.tsx';
+---
+
+<BaseLayout
+  title="Retirement Calculator"
+  description="Calculate your retirement readiness with our free retirement planning calculator for Hawaii public employees."
+>
+  <Calculator client:load />
+</BaseLayout>

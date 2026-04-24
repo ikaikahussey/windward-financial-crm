@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EventDetail, { type Event as EventShape } from '../../components/pages/EventDetail.tsx';
+import { getUpcomingEvents } from '../../lib/events';
+
+export async function getStaticPaths() {
+  const events = await getUpcomingEvents();
+  return events.map((ev) => ({
+    params: { id: String(ev.id) },
+    props: {
+      event: {
+        id: ev.id,
+        title: ev.title,
+        description: ev.description,
+        date: ev.eventDate.toISOString(),
+        location: ev.location || '',
+        address: ev.location || undefined,
+        details: ev.zoomLink ? `<p><strong>Zoom Link:</strong> <a href="${ev.zoomLink}">${ev.zoomLink}</a></p>` : undefined,
+      } as EventShape,
+    },
+  }));
+}
+
+const { event } = Astro.props as { event: EventShape };
+---
+
+<BaseLayout
+  title={event.title}
+  description={event.description.slice(0, 160)}
+>
+  <EventDetail client:load event={event} />
+</BaseLayout>

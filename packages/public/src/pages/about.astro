@@ -1,0 +1,26 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import About, { type TeamMember } from '../components/pages/About.tsx';
+
+const page = await getEntry('pages', 'about');
+const title = page?.data.title ?? 'About Us';
+const metaDescription = page?.data.metaDescription;
+
+const rawTeam = await getCollection('team', ({ data }) => data.published !== false);
+rawTeam.sort((a, b) => a.data.displayOrder - b.data.displayOrder);
+
+const team: TeamMember[] = rawTeam.map((m) => ({
+  id: m.slug,
+  name: m.data.name,
+  role: m.data.title,
+  email: m.data.email,
+  phone: m.data.phone,
+  photoUrl: m.data.photo,
+  bio: m.body.trim(),
+}));
+---
+
+<BaseLayout title={title} description={metaDescription}>
+  <About client:load team={team} />
+</BaseLayout>

@@ -1,0 +1,13 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import NationalLifeTransition from '../components/pages/NationalLifeTransition.tsx';
+
+const page = await getEntry('pages', 'national-life-transition');
+const title = page?.data.title ?? 'National Life Group Transition';
+const metaDescription = page?.data.metaDescription;
+---
+
+<BaseLayout title={title} description={metaDescription}>
+  <NationalLifeTransition client:load />
+</BaseLayout>
