@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { PipelineStage } from '@/types';
 import { Calendar, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { PageHelp } from '@/components/PageHelp';
 
 interface ReportData {
   pipeline_funnel: { stage: PipelineStage; label: string; count: number }[];
@@ -99,6 +100,18 @@ export default function Reports() {
           />
         </div>
       </div>
+
+      <PageHelp
+        id="reports"
+        title="What are Reports?"
+        description="Executive view of pipeline funnel, lead sources, agent activity, and revenue. Useful for weekly reviews."
+        tips={[
+          'Filter by date range using the From/To pickers in the header.',
+          'The Pipeline Funnel shows conversion volume from New Lead through Active Client.',
+          'Lead Sources compares total volume vs converted count per source — use this to decide where to invest more.',
+          'Agent Activity shows calls, appointments, and closes per agent over the selected window.',
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pipeline Funnel */}

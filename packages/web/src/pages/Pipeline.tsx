@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import type { Contact, User, PipelineStage } from '@/types';
 import { Search, GripVertical } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 const STAGES: { key: PipelineStage; label: string; color: string; bg: string }[] = [
   { key: 'New Lead', label: 'New Lead', color: 'border-blue-400', bg: 'bg-blue-50' },
@@ -123,6 +124,18 @@ export default function Pipeline() {
           </select>
         </div>
       </div>
+
+      <PageHelp
+        id="pipeline"
+        title="What is the Pipeline?"
+        description="Visual kanban of every active contact, grouped by their current pipeline stage. The board view of what Contacts shows in a list."
+        tips={[
+          'Drag a card across columns to advance the stage. A new pipeline_entries row is appended automatically and any stage automations fire.',
+          'Each card shows days-in-stage so stale opportunities are easy to spot.',
+          'Filter by agent or search by name to scope what you\'re looking at.',
+          'Click a card (without dragging) to open that contact\'s full detail page.',
+        ]}
+      />
 
       {loading ? (
         <div className="animate-pulse text-primary">Loading pipeline...</div>

@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 const HEALTH_REFRESH_MS = 30_000;
 
@@ -103,6 +104,19 @@ export default function QuoStatus() {
           </button>
         </div>
       </div>
+
+      <PageHelp
+        id="ops-quo"
+        title="What is Quo Status?"
+        description="Health dashboard for the OpenPhone (Quo) integration that powers calls and SMS. First place to look when communications stop syncing."
+        tips={[
+          'API Key card flips red when QUO_API_KEY is unset; set it in env or in Settings → Quo Integration.',
+          'Webhooks card shows how many of the 4 expected events are registered. 0/4 is normal in dev; should be 4/4 in prod.',
+          '24-hour counters show webhook volume + outcome. A growing "Unmatched" count usually means a new phone number isn\'t on a contact yet.',
+          'Sync Now triggers a manual quo-sync job and polls until it lands; check Operations → Automation Activity for the run record.',
+          'Click any webhook row to see the full JSON payload OpenPhone sent — useful for debugging unmatched events.',
+        ]}
+      />
 
       {syncMsg && (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded-lg text-sm">

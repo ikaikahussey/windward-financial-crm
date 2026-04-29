@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 interface WebinarRegistration {
   id: string;
@@ -37,6 +38,17 @@ export default function MarketingWebinars() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-primary-dark">Webinar Registrations</h1>
+
+      <PageHelp
+        id="marketing-webinars"
+        title="What are Webinar Registrations?"
+        description="Read-only roll-up of everyone who registered for a webinar via the marketing site."
+        tips={[
+          'New registrations land here automatically when someone fills out the public webinar form.',
+          'For new webinar listings, use Events — that page publishes to the public site and tracks registrations the same way.',
+          'Use the names + emails here to follow up manually or import them into a Campaign.',
+        ]}
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-sand-dark overflow-hidden">
         {loading ? (

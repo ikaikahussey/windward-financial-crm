@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { User } from '@/types';
 import { Settings as SettingsIcon, Users, Wifi, Plus, Edit2, X, Check } from 'lucide-react';
+import { PageHelp } from '@/components/PageHelp';
 
 export default function Settings() {
   const [tab, setTab] = useState<'general' | 'users' | 'quo'>('general');
@@ -10,6 +11,18 @@ export default function Settings() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-primary-dark">Settings</h1>
+
+      <PageHelp
+        id="settings"
+        title="What lives in Settings?"
+        description="System-wide configuration: company info, SMTP, user accounts, and the Quo (OpenPhone) integration."
+        tips={[
+          'General: company name/phone, scheduling link, and SMTP credentials used to send queued emails.',
+          'Users: same data as the Users page; create / edit / activate accounts here too.',
+          'Quo Integration: paste your OpenPhone API key, test the connection, register webhooks, and assign phone numbers to agents.',
+          'Saving SMTP creds writes to the database — restart the API to pick up env-var changes if you prefer those over DB settings.',
+        ]}
+      />
 
       <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm border border-sand-dark w-fit">
         <button onClick={() => setTab('general')} className={cn('flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition', tab === 'general' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-sand')}>

@@ -11,6 +11,7 @@ import {
   FileText,
   ArrowRight,
 } from 'lucide-react';
+import { PageHelp } from '@/components/PageHelp';
 
 interface MarketingStats {
   total_districts: number;
@@ -47,6 +48,18 @@ export default function MarketingDashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-primary-dark">Marketing</h1>
+
+      <PageHelp
+        id="marketing"
+        title="What is the Marketing module?"
+        description="Top-of-funnel outreach: target school districts and government employers, run multi-channel campaigns, and track webinar / ad performance."
+        tips={[
+          'The stats row counts districts, district contacts, active campaigns, webinar registrants, and ad spend at a glance.',
+          'Drill into Districts to manage Hawaii school + government employer rosters and per-employer contacts.',
+          'Campaigns ties templates and webinars together into a multi-step outreach sequence.',
+          'Ads tracks geo-targeted spend on Google / Meta / LinkedIn.',
+        ]}
+      />
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

@@ -13,6 +13,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 const STAGES: { key: PipelineStage; label: string; color: string }[] = [
   { key: 'New Lead', label: 'New Lead', color: 'bg-blue-100 text-blue-800' },
@@ -98,6 +99,18 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-primary-dark">Dashboard</h1>
+
+      <PageHelp
+        id="dashboard"
+        title="What is the Dashboard?"
+        description="Real-time overview of pipeline health, today's tasks, and recent activity. The first place to land each morning."
+        tips={[
+          'Stats row counts total contacts, due tasks, overdue tasks, this-week appointments, and new leads.',
+          'The mini-kanban shows each pipeline stage with the contacts currently in it — click "View pipeline" for the full board.',
+          'Click any contact card to jump straight to their detail page.',
+          'Recent Activity is a feed of the latest notes, calls, SMS, and stage changes across the whole CRM.',
+        ]}
+      />
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

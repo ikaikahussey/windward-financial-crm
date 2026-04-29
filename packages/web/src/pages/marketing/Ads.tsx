@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 interface Ad {
   id: string;
@@ -55,6 +56,18 @@ export default function MarketingAds() {
           <Plus className="h-4 w-4" /> New Ad Campaign
         </button>
       </div>
+
+      <PageHelp
+        id="marketing-ads"
+        title="What are Ad Campaigns?"
+        description="Geo-targeted ad campaigns on Google, Meta, and LinkedIn aimed at specific Hawaii school districts and government employers."
+        tips={[
+          'Create a campaign tied to a district + platform combo with a daily budget and start/end dates.',
+          'Impressions and clicks are tracked per campaign; populate them via your platform\'s reporting (manually for now).',
+          'Status governs whether the campaign rolls into spend totals and the marketing dashboard.',
+          'Pair with the Districts page: create a district first, then attach an ad campaign to it.',
+        ]}
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-sand-dark overflow-hidden">
         {loading ? (

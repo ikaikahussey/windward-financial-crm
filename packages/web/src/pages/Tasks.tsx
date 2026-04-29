@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Task, User } from '@/types';
 import { Plus, X, CheckSquare, Clock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 export default function Tasks() {
   const { user } = useAuth();
@@ -64,6 +65,18 @@ export default function Tasks() {
           <Plus className="h-4 w-4" /> Add Task
         </button>
       </div>
+
+      <PageHelp
+        id="tasks"
+        title="What are Tasks?"
+        description="Personal task list for follow-ups, calls, emails, and reviews. Anything you need to remember to do for a contact lives here."
+        tips={[
+          'Add a task with a title, optional contact link, type (call / email / meeting / review), priority, and due date.',
+          'Check the box to mark complete. Filter to Today / Overdue / All to focus on what needs attention right now.',
+          'Tasks attached to a contact also appear on that contact\'s detail page in the Tasks card.',
+          'Some tasks are created automatically by stage automations — those still show up here for whoever is assigned.',
+        ]}
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm border border-sand-dark w-fit">

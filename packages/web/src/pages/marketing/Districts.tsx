@@ -6,6 +6,7 @@ import {
   Upload, Search, ChevronLeft, ChevronRight, UserSearch, Mail, Send,
   CheckCircle, Circle, Loader2, X, Edit2, Eye, AlertTriangle, Check, Plus,
 } from 'lucide-react';
+import { PageHelp } from '@/components/PageHelp';
 
 interface DistrictContact {
   id: number;
@@ -533,6 +534,18 @@ export default function MarketingDistricts() {
           </button>
         </div>
       </div>
+
+      <PageHelp
+        id="marketing-districts"
+        title="What is the Section 125 Campaign Builder?"
+        description="Build outreach campaigns to Hawaii school districts and government employers in five steps: pick districts, search contacts, review, preview emails, send."
+        tips={[
+          '"Add District" creates a new employer; "Upload CSV" bulk-imports districts and their HR contacts.',
+          'Click a district name to manage its contact roster individually.',
+          'The workflow strip shows where you are in the campaign send. Each step unlocks once the previous one is complete.',
+          'Campaigns built here are stored separately from the main pipeline — these are top-of-funnel B2B outreach, not individual leads.',
+        ]}
+      />
 
       {/* Pipeline Steps Indicator */}
       <div className="bg-white rounded-xl shadow-sm border border-sand-dark p-4">

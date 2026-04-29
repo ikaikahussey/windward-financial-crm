@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { EmailSequence, EmailTemplate, Contact } from '@/types';
 import { Plus, Mail, ArrowDown, Clock, Users, X, Search } from 'lucide-react';
+import { PageHelp } from '@/components/PageHelp';
 
 export default function Sequences() {
   const [sequences, setSequences] = useState<EmailSequence[]>([]);
@@ -31,6 +32,18 @@ export default function Sequences() {
           <Plus className="h-4 w-4" /> New Sequence
         </button>
       </div>
+
+      <PageHelp
+        id="sequences"
+        title="What are Email Sequences?"
+        description="Multi-step drip campaigns that walk a contact through a series of templates with delays between each step."
+        tips={[
+          'Build a sequence by chaining templates and setting delay-days for each step.',
+          'Assign a contact (or a list) to enroll them — emails queue automatically and fire from the email-queue cron.',
+          'Pause a sequence to stop new sends without losing the assignment list.',
+          'Track delivery in Operations → Automation Activity → Email Queue.',
+        ]}
+      />
 
       {loading ? (
         <div className="animate-pulse text-primary">Loading...</div>

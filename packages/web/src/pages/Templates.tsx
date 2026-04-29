@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { EmailTemplate } from '@/types';
 import { Plus, Edit2, Eye, X, Mail } from 'lucide-react';
+import { PageHelp } from '@/components/PageHelp';
 
 export default function Templates() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -42,6 +43,18 @@ export default function Templates() {
           <Plus className="h-4 w-4" /> New Template
         </button>
       </div>
+
+      <PageHelp
+        id="templates"
+        title="What are Email Templates?"
+        description="Reusable email bodies sent by stage automations, sequences, and one-off sends. Templates are referenced by name from the automation engine."
+        tips={[
+          'Create a template with a name, subject, and body. Use {{first_name}}, {{last_name}}, etc. as merge fields.',
+          'Sequence-position controls where the template falls inside a multi-step drip; delay-days controls when it sends after the previous step.',
+          'Templates named with patterns like "Renewal Reminder", "Annual Review", "Re-engagement 90" are picked up by built-in cron jobs.',
+          'Edit in place; saves are immediate. The automation engine picks up the new content on the next send.',
+        ]}
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-sand-dark overflow-hidden">
         {loading ? (

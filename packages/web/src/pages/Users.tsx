@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import type { User } from '@/types';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 const ROLES: { value: User['role']; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -50,6 +51,19 @@ export default function Users() {
           <Plus className="h-4 w-4" /> Add User
         </button>
       </div>
+
+      <PageHelp
+        id="users"
+        title="What lives on the Users page?"
+        description="Manage everyone who can sign into this admin. Used for both team members (admin / agent) and view-only accounts."
+        tips={[
+          'Add a user with name, email, role (admin / agent / viewer), and an initial password (>=8 chars).',
+          'Editing: leave the password blank to keep the current one; fill it in to rotate.',
+          'Roles: admin sees Operations and can manage users; agent is the standard role; viewer is read-only.',
+          'Deleting fails if the user is still referenced by contacts or tasks — reassign their work first or set them inactive.',
+          'You can\'t delete yourself — log in as another admin first.',
+        ]}
+      />
 
       {error && (
         <div className="bg-coral-light text-coral p-3 rounded-lg text-sm">{error}</div>

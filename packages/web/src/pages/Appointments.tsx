@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { Appointment, User, Contact } from '@/types';
 import { Plus, Calendar, List, X, Search, Clock, MapPin } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 const STATUS_BADGE: Record<string, string> = {
   scheduled: 'bg-blue-100 text-blue-700',
@@ -60,6 +61,18 @@ export default function Appointments() {
           </button>
         </div>
       </div>
+
+      <PageHelp
+        id="appointments"
+        title="What are Appointments?"
+        description="Schedule and track agent meetings with contacts. Drives the consultation step in the sales pipeline."
+        tips={[
+          'Toggle between List view and Week view in the top-right.',
+          'Add an appointment with start/end times, location, and an optional contact link.',
+          'Status badges show scheduled / completed / cancelled / no-show — update them as the meeting progresses.',
+          'You can also schedule from a contact detail page using the "Schedule Appt" quick action.',
+        ]}
+      />
 
       {loading ? (
         <div className="animate-pulse text-primary">Loading...</div>

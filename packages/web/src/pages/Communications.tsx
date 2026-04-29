@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { CallLog, SmsMessage, User } from '@/types';
 import { Phone, MessageSquare, PhoneIncoming, PhoneOutgoing, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 export default function Communications() {
   const navigate = useNavigate();
@@ -50,6 +51,18 @@ export default function Communications() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-primary-dark">Communications</h1>
+
+      <PageHelp
+        id="communications"
+        title="What are Communications?"
+        description="Unified inbox of calls and SMS synced from Quo (OpenPhone). Inbound and outbound activity lands here in real time via webhooks."
+        tips={[
+          'Toggle between Calls and Messages with the tabs.',
+          'Calls show direction (in/out), duration, and AI summary + transcription when OpenPhone has them.',
+          'Click an agent or contact name to filter to just their conversations.',
+          'If a call shows "Unmatched" the caller\'s phone didn\'t match any contact — fix it by adding the number to their record.',
+        ]}
+      />
 
       {/* Tabs */}
       <div className="flex items-center justify-between">

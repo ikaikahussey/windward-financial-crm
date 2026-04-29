@@ -3,6 +3,7 @@ import { adminApi } from '@/lib/admin-api';
 import { cn } from '@/lib/utils';
 import { ArrowDown, ArrowUp, Eye, X, Flame } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 type Lead = Awaited<ReturnType<typeof adminApi.leadsList>>['leads'][number];
 type ContactDetail = Awaited<ReturnType<typeof adminApi.leadsContact>>;
@@ -88,6 +89,19 @@ export default function LeadScoring() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-primary-dark">Lead Scoring</h1>
+
+      <PageHelp
+        id="ops-leads"
+        title="What is Lead Scoring?"
+        description="Visibility into the AI lead-scoring system. Each contact gets a 0-100 score recomputed daily based on employment, years of service, life-insurance status, lead source, and profile completeness."
+        tips={[
+          'Hot leads (≥70) auto-book a Consultation Scheduled stage entry — see "Auto-Booked Today" in the KPI row.',
+          'Click a histogram bucket to filter the leads table to that score range.',
+          'Use the eye icon on a lead row to open the per-contact drawer with factor-by-factor contributions and the recent score history.',
+          'Run history (collapsed at the bottom) shows the last 30 scoring jobs with averages, hot counts, and durations.',
+          'Re-scoring runs daily at 9am HST. To trigger one manually you can hit POST /api/admin/leads/scoring (not yet exposed in UI) or wait for the cron.',
+        ]}
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

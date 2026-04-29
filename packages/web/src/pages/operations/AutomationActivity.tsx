@@ -3,6 +3,7 @@ import { adminApi } from '@/lib/admin-api';
 import { cn } from '@/lib/utils';
 import { RefreshCw, X } from 'lucide-react';
 import { format, formatDistanceToNow, subDays } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 type Tab = 'email' | 'stage' | 'jobs';
 
@@ -17,6 +18,17 @@ export default function AutomationActivity() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-primary-dark">Automation Activity</h1>
+      <PageHelp
+        id="ops-automation"
+        title="What is Automation Activity?"
+        description="Three tabs covering everything the system does on its own: queued emails, stage-change side-effects, and background cron / manual jobs."
+        tips={[
+          'Email Queue: pending / sent / failed counts with per-row Retry. "Retry all failed today" re-pends every Failed row created since midnight.',
+          'Stage Automation: every pipeline transition with the side-effects (queued emails, notes, etc.) that fired alongside it. Click a row to see the full side-effect list.',
+          'Background Jobs: 30-day heatmap (green=success, amber=partial, red=failed) plus a filterable runs table. Click a run to see the full log + error trace.',
+          'Use this page to debug why an expected automation didn\'t fire — start by checking the relevant job ran successfully, then look at the side-effects on the stage transition.',
+        ]}
+      />
       <div className="border-b border-sand-dark flex gap-1">
         {TABS.map((t) => (
           <button

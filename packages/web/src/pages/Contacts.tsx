@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { Contact, User, PipelineStage, EmploymentType, Island, LeadSource } from '@/types';
 import { Search, Plus, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 const STAGES: { value: PipelineStage; label: string }[] = [
   { value: 'New Lead', label: 'New Lead' },
@@ -126,6 +127,18 @@ export default function Contacts() {
           <Plus className="h-4 w-4" /> Add Contact
         </button>
       </div>
+
+      <PageHelp
+        id="contacts"
+        title="What are Contacts?"
+        description="Master list of every lead, prospect, and client in the CRM. This is the system-of-record for every person you talk to."
+        tips={[
+          'Click "Add Contact" to capture a new lead — first/last name are required, everything else is optional.',
+          'Use the filters to narrow by stage, employment, island, agent, or source. Search hits name, email, and phone.',
+          'Click any row to open that contact\'s full detail page (notes, policies, tasks, appointments, stage history).',
+          'Sort by Name, Email, Stage, or Last Contact by clicking the column header; click again to reverse.',
+        ]}
+      />
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-sand-dark p-4">

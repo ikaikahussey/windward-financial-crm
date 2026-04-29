@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent } from 'react';
 import { api } from '@/lib/api';
 import { Plus, X, Pencil, Trash2, Users as UsersIcon, Calendar, MapPin, Link as LinkIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 interface EventRecord {
   id: number;
@@ -147,6 +148,18 @@ export default function Events() {
           <Plus className="h-4 w-4" /> New Event
         </button>
       </div>
+
+      <PageHelp
+        id="events"
+        title="What are Events?"
+        description="Public-facing webinars, seminars, and workshops listed on the marketing website. Mutations here publish to the public site."
+        tips={[
+          'Create an event with a title, date, location, and description. Publishing fires REBUILD_WEBHOOK_URL so the static site rebuilds.',
+          'Set max attendees to enforce a cap on the public registration form.',
+          'Registrations from the website are listed under the event; click through to see who signed up.',
+          'Unpublishing an event hides it from the website without deleting the data.',
+        ]}
+      />
 
       {loading ? (
         <p className="text-gray-500">Loading events...</p>

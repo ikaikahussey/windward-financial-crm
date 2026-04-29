@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { PageHelp } from '@/components/PageHelp';
 
 interface Campaign {
   id: string;
@@ -47,6 +48,18 @@ export default function MarketingCampaigns() {
           <Plus className="h-4 w-4" /> New Campaign
         </button>
       </div>
+
+      <PageHelp
+        id="marketing-campaigns"
+        title="What are Campaigns?"
+        description="Multi-channel outreach campaigns that mix email, webinars, and PDF resources into a single coordinated push."
+        tips={[
+          'Create a campaign with a name, type (email / webinar / pdf), and status. Status governs whether enrollments fire.',
+          'Drill into a campaign to manage its steps, see enrollments, and review per-step performance metrics (sent / opened / clicked).',
+          'Pause a campaign to halt new enrollments without affecting in-flight ones.',
+          'Campaigns can be tied to a district to target a specific employer roster — see the Districts page for that workflow.',
+        ]}
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-sand-dark overflow-hidden">
         {loading ? (

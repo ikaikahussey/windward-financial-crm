@@ -1,6 +1,7 @@
 import { CHANGELOG } from '@/lib/changelog';
 import { format } from 'date-fns';
 import { GitCommit } from 'lucide-react';
+import { PageHelp } from '@/components/PageHelp';
 
 export default function Changelog() {
   const live = __APP_VERSION__;
@@ -21,6 +22,18 @@ export default function Changelog() {
           · built {format(new Date(__APP_BUILD_DATE__), 'PPpp')}
         </p>
       </div>
+
+      <PageHelp
+        id="changelog"
+        title="What is the Changelog?"
+        description="Curated list of every notable deploy. The entry tagged 'live' is what's currently running in production."
+        tips={[
+          'The version SHA at the top (and in the sidebar footer) comes from `git rev-parse --short HEAD` at build time.',
+          'Click a SHA to jump to the GitHub commit.',
+          'Add a new entry by editing packages/web/src/lib/changelog.ts — prepend to the array. The "live" badge moves automatically on the next deploy.',
+          'If you don\'t see a feature you expect to be live, the deploy probably hasn\'t shipped yet — check the version vs your most recent merge.',
+        ]}
+      />
 
       <ol className="space-y-6">
         {CHANGELOG.map((entry) => {
