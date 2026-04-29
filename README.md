@@ -505,7 +505,41 @@ The app is also designed for Railway:
 - **Admin** → Static site (Vite build output, `packages/web/dist`)
 - **PostgreSQL** → Railway managed Postgres
 
-Set `PUBLIC_API_URL` on the public service and `VITE_API_URL` on the admin service to point to the API service URL. Set `BUILD_DATABASE_URL` on the public service to a read-only Postgres role so the build can render upcoming events.
+#### Auto-deploy from GitHub
+
+`.github/workflows/deploy.yml` watches `main`, diffs the push, and runs
+`railway up` for whichever of `packages/{api,public,web}` changed. A change to
+the workflow file or root `package*.json` redeploys all three. Manual deploys
+are also available via the **Actions** tab → "Deploy to Railway" → Run workflow,
+with `service: api|public|web|all` and `action: up|redeploy|logs`.
+
+Required GitHub secret: `RAILWAY_TOKEN` — an account token from
+[https://railway.com/account/tokens](https://railway.com/account/tokens). The
+project ID is hardcoded in the workflow (`RAILWAY_PROJECT_ID` env).
+
+#### Required Railway environment variables
+
+Set these directly on each Railway service (Settings → Variables) — the
+workflow does not push them.
+
+**API service:**
+- `DATABASE_URL`, `SESSION_SECRET`, plus the SMTP / Quo / Anthropic vars from
+  `.env.example`
+- `PUBLIC_URL`, `ADMIN_URL` for CORS
+- `REBUILD_WEBHOOK_URL` (optional) — usually a Railway redeploy webhook for the
+  public service so admin event edits trigger a rebuild
+
+**Public service:**
+- `PUBLIC_API_URL` — base URL the Astro forms post to (e.g.
+  `https://api.windward.financial`)
+- `PUBLIC_SITE_URL` — canonical site URL (used for sitemap)
+- `PUBLIC_NLG_LOGIN_URL` — National Life Group customer login URL
+- `BUILD_DATABASE_URL` — read-only Postgres role used at build time to query
+  upcoming events. **Build still succeeds when unset** (events page renders
+  empty), so previews without DB access don't break.
+
+**Admin service:**
+- `VITE_API_URL` — base URL the admin posts to
 
 ---
 
