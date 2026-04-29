@@ -197,6 +197,14 @@ export default function Sidebar() {
           <div className="min-w-0">
             <p className="text-sm font-medium text-white truncate">{user?.name}</p>
             <p className="text-xs text-primary-light/60 truncate">{user?.role}</p>
+            <NavLink
+              to="/changelog"
+              onClick={() => setMobileOpen(false)}
+              className="text-[10px] font-mono text-primary-light/50 hover:text-primary-light transition-colors"
+              title="View changelog"
+            >
+              v{__APP_VERSION__}
+            </NavLink>
           </div>
           <button
             onClick={logout}

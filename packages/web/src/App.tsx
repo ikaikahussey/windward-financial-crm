@@ -24,6 +24,7 @@ import MarketingAds from '@/pages/marketing/Ads';
 import QuoStatus from '@/pages/operations/QuoStatus';
 import LeadScoring from '@/pages/operations/LeadScoring';
 import AutomationActivity from '@/pages/operations/AutomationActivity';
+import Changelog from '@/pages/Changelog';
 
 function AdminOnly({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -99,6 +100,7 @@ export default function App() {
               </AdminOnly>
             }
           />
+          <Route path="/changelog" element={<Changelog />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
