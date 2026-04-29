@@ -4,45 +4,48 @@ import { Plus, X, Pencil, Trash2, Users as UsersIcon, Calendar, MapPin, Link as 
 import { format } from 'date-fns';
 import { PageHelp } from '@/components/PageHelp';
 
+// Field names below are snake_case because the api client transforms every
+// response to snake_case (see packages/web/src/lib/api.ts). The form state
+// is also snake_case and is converted back to camelCase on the way out.
 interface EventRecord {
   id: number;
   title: string;
   description: string;
-  eventDate: string;
-  endDate: string | null;
+  event_date: string;
+  end_date: string | null;
   location: string | null;
-  zoomLink: string | null;
-  registrationRequired: boolean;
-  maxAttendees: number | null;
-  isPublished: boolean;
-  createdAt: string;
-  updatedAt: string;
+  zoom_link: string | null;
+  registration_required: boolean;
+  max_attendees: number | null;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Registration {
   id: number;
-  eventId: number;
-  contactId: number | null;
-  firstName: string;
-  lastName: string;
+  event_id: number;
+  contact_id: number | null;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string | null;
-  employmentType: string | null;
-  employerSchool: string | null;
-  registeredAt: string;
+  employment_type: string | null;
+  employer_school: string | null;
+  registered_at: string;
   attended: boolean | null;
 }
 
 const emptyForm = {
   title: '',
   description: '',
-  eventDate: '',
-  endDate: '',
+  event_date: '',
+  end_date: '',
   location: '',
-  zoomLink: '',
-  registrationRequired: true,
-  maxAttendees: '',
-  isPublished: true,
+  zoom_link: '',
+  registration_required: true,
+  max_attendees: '',
+  is_published: true,
 };
 
 export default function Events() {
@@ -80,13 +83,13 @@ export default function Events() {
     setForm({
       title: event.title,
       description: event.description,
-      eventDate: toLocalInput(event.eventDate),
-      endDate: event.endDate ? toLocalInput(event.endDate) : '',
+      event_date: toLocalInput(event.event_date),
+      end_date: event.end_date ? toLocalInput(event.end_date) : '',
       location: event.location ?? '',
-      zoomLink: event.zoomLink ?? '',
-      registrationRequired: event.registrationRequired,
-      maxAttendees: event.maxAttendees != null ? String(event.maxAttendees) : '',
-      isPublished: event.isPublished,
+      zoom_link: event.zoom_link ?? '',
+      registration_required: event.registration_required,
+      max_attendees: event.max_attendees != null ? String(event.max_attendees) : '',
+      is_published: event.is_published,
     });
     setShowForm(true);
   }
@@ -94,16 +97,17 @@ export default function Events() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
+    // Send snake_case; the api client converts to camelCase for the backend.
     const payload = {
       title: form.title,
       description: form.description,
-      eventDate: new Date(form.eventDate).toISOString(),
-      endDate: form.endDate ? new Date(form.endDate).toISOString() : null,
+      event_date: new Date(form.event_date).toISOString(),
+      end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
       location: form.location || null,
-      zoomLink: form.zoomLink || null,
-      registrationRequired: form.registrationRequired,
-      maxAttendees: form.maxAttendees ? Number(form.maxAttendees) : null,
-      isPublished: form.isPublished,
+      zoom_link: form.zoom_link || null,
+      registration_required: form.registration_required,
+      max_attendees: form.max_attendees ? Number(form.max_attendees) : null,
+      is_published: form.is_published,
     };
     try {
       if (editing) {
@@ -188,18 +192,18 @@ export default function Events() {
                 <tr key={event.id} className="border-t border-sand-dark hover:bg-sand/30">
                   <td className="px-4 py-3 font-medium text-primary-dark">{event.title}</td>
                   <td className="px-4 py-3 text-gray-600">
-                    {format(new Date(event.eventDate), 'MMM d, yyyy h:mm a')}
+                    {format(new Date(event.event_date), 'MMM d, yyyy h:mm a')}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{event.location ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span
                       className={
-                        event.isPublished
+                        event.is_published
                           ? 'bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full'
                           : 'bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full'
                       }
                     >
-                      {event.isPublished ? 'Published' : 'Draft'}
+                      {event.is_published ? 'Published' : 'Draft'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -273,8 +277,8 @@ export default function Events() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
                   <input
                     type="datetime-local"
-                    value={form.eventDate}
-                    onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
+                    value={form.event_date}
+                    onChange={(e) => setForm({ ...form, event_date: e.target.value })}
                     required
                     className="w-full px-3 py-2 border border-sand-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   />
@@ -283,8 +287,8 @@ export default function Events() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                   <input
                     type="datetime-local"
-                    value={form.endDate}
-                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    value={form.end_date}
+                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
                     className="w-full px-3 py-2 border border-sand-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -311,8 +315,8 @@ export default function Events() {
                 </label>
                 <input
                   type="url"
-                  value={form.zoomLink}
-                  onChange={(e) => setForm({ ...form, zoomLink: e.target.value })}
+                  value={form.zoom_link}
+                  onChange={(e) => setForm({ ...form, zoom_link: e.target.value })}
                   placeholder="https://zoom.us/j/..."
                   className="w-full px-3 py-2 border border-sand-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 />
@@ -323,8 +327,8 @@ export default function Events() {
                 <input
                   type="number"
                   min={0}
-                  value={form.maxAttendees}
-                  onChange={(e) => setForm({ ...form, maxAttendees: e.target.value })}
+                  value={form.max_attendees}
+                  onChange={(e) => setForm({ ...form, max_attendees: e.target.value })}
                   placeholder="Leave blank for unlimited"
                   className="w-full px-3 py-2 border border-sand-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 />
@@ -334,8 +338,8 @@ export default function Events() {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={form.registrationRequired}
-                    onChange={(e) => setForm({ ...form, registrationRequired: e.target.checked })}
+                    checked={form.registration_required}
+                    onChange={(e) => setForm({ ...form, registration_required: e.target.checked })}
                     className="h-4 w-4 text-primary"
                   />
                   <span className="text-sm text-gray-700">Registration required</span>
@@ -343,8 +347,8 @@ export default function Events() {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={form.isPublished}
-                    onChange={(e) => setForm({ ...form, isPublished: e.target.checked })}
+                    checked={form.is_published}
+                    onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
                     className="h-4 w-4 text-primary"
                   />
                   <span className="text-sm text-gray-700">Published</span>
@@ -409,12 +413,12 @@ export default function Events() {
                   <tbody>
                     {registrations.map((reg) => (
                       <tr key={reg.id} className="border-t border-sand-dark">
-                        <td className="px-3 py-2 font-medium">{reg.firstName} {reg.lastName}</td>
+                        <td className="px-3 py-2 font-medium">{reg.first_name} {reg.last_name}</td>
                         <td className="px-3 py-2 text-gray-600">{reg.email}</td>
                         <td className="px-3 py-2 text-gray-600">{reg.phone ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{reg.employerSchool ?? '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">{reg.employer_school ?? '—'}</td>
                         <td className="px-3 py-2 text-gray-600">
-                          {format(new Date(reg.registeredAt), 'MMM d, yyyy')}
+                          {format(new Date(reg.registered_at), 'MMM d, yyyy')}
                         </td>
                       </tr>
                     ))}
