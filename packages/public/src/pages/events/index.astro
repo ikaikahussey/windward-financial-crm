@@ -1,0 +1,84 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getUpcomingEvents } from '../../lib/events';
+
+const events = await getUpcomingEvents();
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+---
+
+<BaseLayout
+  title="Events | Windward Financial"
+  description="Upcoming financial education events and workshops for Hawaii public employees."
+>
+  <section class="bg-primary-dark py-16 md:py-20">
+    <div class="container-wide mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="font-heading text-4xl md:text-5xl text-white mb-4">Events</h1>
+      <p class="text-primary-light/80 text-xl max-w-2xl">
+        Join us for workshops, presentations, and community events across Hawaii.
+      </p>
+    </div>
+  </section>
+
+  <section class="section-padding bg-sand">
+    <div class="container-wide mx-auto">
+      {events.length === 0 ? (
+        <div class="text-center py-16">
+          <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+          </svg>
+          <h2 class="font-heading text-2xl text-gray-600 mb-2">No Upcoming Events</h2>
+          <p class="text-gray-500 mb-6">Check back soon for new events and workshops.</p>
+          <a href="/schedule-an-appointment" class="btn-primary">Schedule a One-on-One Instead</a>
+        </div>
+      ) : (
+        <div class="space-y-6">
+          {events.map((event) => (
+            <div class="card hover:shadow-xl transition-shadow">
+              <div class="md:flex md:items-start md:gap-8">
+                <div class="shrink-0 mb-4 md:mb-0 md:w-32 text-center">
+                  <div class="bg-primary-light rounded-lg p-4 inline-block md:block">
+                    <p class="text-primary-dark font-heading text-lg">
+                      {new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' })}
+                    </p>
+                    <p class="text-primary-dark font-heading text-3xl">
+                      {new Date(event.eventDate).getDate()}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-heading text-2xl text-primary-dark mb-2">{event.title}</h3>
+                  <div class="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {formatDate(new Date(event.eventDate))}
+                    </span>
+                    {event.location && (
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                        </svg>
+                        {event.location}
+                      </span>
+                    )}
+                  </div>
+                  <p class="text-gray-600 mb-4">{event.description}</p>
+                  <a href={`/events/${event.id}`} class="btn-primary text-sm">Register</a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</BaseLayout>

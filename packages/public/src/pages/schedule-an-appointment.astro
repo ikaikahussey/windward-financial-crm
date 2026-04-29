@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ScheduleForm from '../components/islands/ScheduleForm';
+---
+
+<BaseLayout
+  title="Schedule an Appointment | Windward Financial"
+  description="Book a free consultation with our financial planning team."
+>
+  <section class="bg-primary-dark py-16 md:py-20">
+    <div class="container-wide mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="font-heading text-4xl md:text-5xl text-white mb-4">Schedule an Appointment</h1>
+      <p class="text-primary-light/80 text-xl max-w-2xl">
+        Book a free, no-obligation consultation with our team.
+      </p>
+    </div>
+  </section>
+
+  <section class="section-padding bg-sand">
+    <div class="container-narrow mx-auto">
+      <div class="card">
+        <ScheduleForm client:load />
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Calculator from '../components/islands/Calculator';
+---
+
+<BaseLayout
+  title="Retirement Calculator | Windward Financial"
+  description="Calculate your retirement readiness with our free retirement planning calculator."
+>
+  <section class="bg-primary-dark py-16 md:py-20">
+    <div class="container-wide mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="font-heading text-4xl md:text-5xl text-white mb-4">Retirement Calculator</h1>
+      <p class="text-primary-light/80 text-xl max-w-2xl">
+        Estimate your retirement readiness based on your ERS pension, 403(b) savings, and Social Security.
+      </p>
+    </div>
+  </section>
+
+  <section class="section-padding bg-sand">
+    <div class="container-wide mx-auto">
+      <Calculator client:load />
+    </div>
+  </section>
+</BaseLayout>

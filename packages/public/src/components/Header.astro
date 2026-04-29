@@ -1,0 +1,53 @@
+---
+import MobileMenu from './islands/MobileMenu';
+
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/about', label: 'About' },
+  { href: '/expertise', label: 'Expertise' },
+  { href: '/quality-commitment', label: 'Quality Commitment' },
+  { href: '/calculator', label: 'Calculator' },
+  { href: '/events', label: 'Events' },
+  { href: '/resources', label: 'Resources' },
+  { href: '/contact', label: 'Contact' },
+];
+
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+
+<header class="bg-primary-dark text-white sticky top-0 z-50 shadow-lg">
+  <div class="container-wide mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-20">
+      <a href="/" class="flex items-center shrink-0">
+        <img src="/logo.png" alt="Windward Financial" class="h-14 w-auto brightness-0 invert" />
+      </a>
+
+      <nav class="hidden lg:flex items-center gap-1">
+        {navLinks.map(({ href, label }) => {
+          const linkPath = href.replace(/\/$/, '') || '/';
+          const isActive = linkPath === currentPath;
+          return (
+            <a
+              href={href}
+              class={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                isActive
+                  ? 'bg-primary text-white'
+                  : 'text-primary-light hover:bg-primary/50 hover:text-white'
+              }`}
+            >
+              {label}
+            </a>
+          );
+        })}
+        <a
+          href="/schedule-an-appointment"
+          class="ml-2 bg-sand text-primary-dark text-sm font-semibold px-4 py-2 rounded-lg hover:bg-sand-dark transition-colors"
+        >
+          Schedule
+        </a>
+      </nav>
+
+      <MobileMenu client:load navLinks={navLinks} currentPath={currentPath} />
+    </div>
+  </div>
+</header>

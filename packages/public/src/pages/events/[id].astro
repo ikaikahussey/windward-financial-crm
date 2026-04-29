@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EventRegistrationForm from '../../components/islands/EventRegistrationForm';
+import { getUpcomingEvents } from '../../lib/events';
+
+export async function getStaticPaths() {
+  const events = await getUpcomingEvents();
+  return events.map((event) => ({
+    params: { id: String(event.id) },
+    props: { event },
+  }));
+}
+
+const { event } = Astro.props;
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+---
+
+<BaseLayout title={`${event.title} | Windward Financial`} description={event.description.slice(0, 160)}>
+  <section class="bg-primary-dark py-16 md:py-20">
+    <div class="container-wide mx-auto px-4 sm:px-6 lg:px-8">
+      <a href="/events" class="text-primary-light/60 hover:text-primary-light text-sm mb-4 inline-block">&larr; Back to Events</a>
+      <h1 class="font-heading text-4xl md:text-5xl text-white mb-4">{event.title}</h1>
+      <div class="flex flex-wrap gap-6 text-primary-light/80">
+        <span class="flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+          </svg>
+          {formatDate(new Date(event.eventDate))}
+        </span>
+        {event.location && (
+          <span class="flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            {event.location}
+          </span>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <section class="section-padding bg-sand">
+    <div class="container-wide mx-auto">
+      <div class="grid lg:grid-cols-5 gap-12">
+        <div class="lg:col-span-3">
+          <div class="card">
+            <h2 class="font-heading text-2xl text-primary-dark mb-4">Event Details</h2>
+            <p class="text-gray-700 leading-relaxed text-lg mb-4">{event.description}</p>
+            {event.zoomLink && (
+              <div class="mt-6 pt-6 border-t border-gray-200">
+                <h3 class="font-semibold text-primary-dark mb-2">Join via Zoom</h3>
+                <a href={event.zoomLink} target="_blank" rel="noopener noreferrer" class="text-ocean hover:underline break-all">
+                  {event.zoomLink}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div class="lg:col-span-2">
+          <div class="card sticky top-24">
+            <h2 class="font-heading text-2xl text-primary-dark mb-6">Register</h2>
+            <EventRegistrationForm client:load eventId={event.id} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

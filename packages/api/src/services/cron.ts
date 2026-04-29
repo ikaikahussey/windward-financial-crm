@@ -13,7 +13,6 @@ import { eq, and, lte, like, sql, desc, isNull } from 'drizzle-orm';
 import { processEmailQueue } from './email-sender';
 import { quoService } from './quo';
 import { scoreContact } from './lead-scoring';
-import { generateBlogDraft, generateNewsletter } from './content-engine';
 import { processCampaignQueue } from './campaign-engine';
 
 // HST = UTC-10, no daylight saving
@@ -349,38 +348,6 @@ export function startCronJobs(): void {
         await rescoreAllLeads();
       } catch (err) {
         console.error('Cron [rescore-leads]:', err);
-      }
-    },
-    { timezone: TZ_HST }
-  );
-
-  // Weekly Monday 7:00 AM HST: generate blog draft
-  cron.schedule(
-    '0 7 * * 1',
-    async () => {
-      try {
-        await generateBlogDraft();
-      } catch (err) {
-        console.error('Cron [blog-draft]:', err);
-      }
-    },
-    { timezone: TZ_HST }
-  );
-
-  // Biweekly Friday 10:00 AM HST: generate newsletter (runs on even-numbered weeks)
-  cron.schedule(
-    '0 10 * * 5',
-    async () => {
-      try {
-        const weekNumber = Math.ceil(
-          (new Date().getTime() - new Date(new Date().getFullYear(), 0, 1).getTime()) /
-            (7 * 24 * 60 * 60 * 1000)
-        );
-        if (weekNumber % 2 === 0) {
-          await generateNewsletter();
-        }
-      } catch (err) {
-        console.error('Cron [newsletter]:', err);
       }
     },
     { timezone: TZ_HST }

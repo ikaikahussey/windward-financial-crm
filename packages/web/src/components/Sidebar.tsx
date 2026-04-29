@@ -11,7 +11,7 @@ import {
   MessageSquare,
   Mail,
   BarChart3,
-  Globe,
+  CalendarDays,
   Target,
   Settings,
   LogOut,
@@ -29,6 +29,7 @@ const mainLinks = [
   { to: '/appointments', icon: Calendar, label: 'Appointments' },
   { to: '/communications', icon: MessageSquare, label: 'Communications' },
   { to: '/templates', icon: Mail, label: 'Templates' },
+  { to: '/events', icon: CalendarDays, label: 'Events' },
   { to: '/reports', icon: BarChart3, label: 'Reports' },
 ];
 
@@ -40,23 +41,12 @@ const marketingLinks = [
   { to: '/marketing/ads', label: 'Ad Campaigns' },
 ];
 
-const cmsLinks = [
-  { to: '/cms/pages', label: 'Pages' },
-  { to: '/cms/blog', label: 'Blog' },
-  { to: '/cms/testimonials', label: 'Testimonials' },
-  { to: '/cms/team', label: 'Team' },
-  { to: '/cms/events', label: 'Events' },
-  { to: '/cms/subscribers', label: 'Subscribers' },
-];
-
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [cmsOpen, setCmsOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
   const location = useLocation();
 
-  const isCmsActive = location.pathname.startsWith('/cms');
   const isMarketingActive = location.pathname.startsWith('/marketing');
 
   const navContent = (
@@ -88,46 +78,6 @@ export default function Sidebar() {
             {link.label}
           </NavLink>
         ))}
-
-        {/* CMS Section */}
-        <button
-          onClick={() => setCmsOpen(!cmsOpen)}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full',
-            isCmsActive
-              ? 'bg-primary-light/20 text-white'
-              : 'text-primary-light/70 hover:bg-primary-dark/50 hover:text-white'
-          )}
-        >
-          <Globe className="h-4 w-4 shrink-0" />
-          <span className="flex-1 text-left">CMS</span>
-          {cmsOpen || isCmsActive ? (
-            <ChevronDown className="h-3 w-3" />
-          ) : (
-            <ChevronRight className="h-3 w-3" />
-          )}
-        </button>
-        {(cmsOpen || isCmsActive) && (
-          <div className="ml-7 space-y-0.5">
-            {cmsLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  cn(
-                    'block px-3 py-2 rounded-md text-sm transition-colors',
-                    isActive
-                      ? 'text-white bg-primary-dark/50'
-                      : 'text-primary-light/60 hover:text-white hover:bg-primary-dark/30'
-                  )
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-        )}
 
         {/* Marketing Section */}
         <button
