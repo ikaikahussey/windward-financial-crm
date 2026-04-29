@@ -60,6 +60,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli@latest
@@ -67,20 +69,49 @@ jobs:
       - name: Resolve target services
         id: targets
         run: |
-          SVC="${{ github.event.inputs.service || 'api' }}"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            SVC="api"
+          set -e
+
+          # Manual dispatch: honor the input.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SVC="${{ github.event.inputs.service || 'api' }}"
+            if [ "$SVC" = "all" ]; then
+              echo "services=api web public" >> "$GITHUB_OUTPUT"
+            else
+              echo "services=$SVC" >> "$GITHUB_OUTPUT"
+            fi
+            echo "action=${{ github.event.inputs.action || 'logs' }}" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          if [ "$SVC" = "all" ]; then
-            echo "services=api web public" >> "$GITHUB_OUTPUT"
-          else
-            echo "services=$SVC" >> "$GITHUB_OUTPUT"
+
+          # Push: deploy whichever packages actually changed.
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="${AFTER}^"
           fi
-          ACT="${{ github.event.inputs.action || 'auto' }}"
-          echo "action=$ACT" >> "$GITHUB_OUTPUT"
+          CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null || git diff --name-only "${AFTER}^" "$AFTER")
+          echo "Changed files since $BEFORE:"
+          echo "$CHANGED" | sed 's/^/  /'
+
+          SERVICES=""
+          echo "$CHANGED" | grep -qE '^packages/api/'    && SERVICES="$SERVICES api"
+          echo "$CHANGED" | grep -qE '^packages/public/' && SERVICES="$SERVICES public"
+          echo "$CHANGED" | grep -qE '^packages/web/'    && SERVICES="$SERVICES web"
+
+          # Root-level or workflow changes → redeploy everything (safer).
+          if echo "$CHANGED" | grep -qE '^\.github/workflows/deploy\.yml$|^package\.json$|^package-lock\.json$'; then
+            SERVICES="api public web"
+          fi
+
+          SERVICES=$(echo "$SERVICES" | xargs)
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          echo "action=up" >> "$GITHUB_OUTPUT"
+          if [ -z "$SERVICES" ]; then
+            echo "No relevant package changes — skipping deploy."
+          fi
 
       - name: Redeploy (re-run last build)
-        if: ${{ steps.targets.outputs.action == 'redeploy' }}
+        if: ${{ steps.targets.outputs.action == 'redeploy' && steps.targets.outputs.services != '' }}
         run: |
           set -e
           for svc in ${{ steps.targets.outputs.services }}; do
@@ -91,23 +122,31 @@ jobs:
           done
 
       - name: Up (push current code as new build)
-        if: ${{ steps.targets.outputs.action == 'up' }}
+        if: ${{ steps.targets.outputs.action == 'up' && steps.targets.outputs.services != '' }}
         run: |
           set -e
+          # Per-service build context: deploy from the package directory
+          # so Railway uses that package's nixpacks.toml / Dockerfile.
           for svc in ${{ steps.targets.outputs.services }}; do
-            echo "::group::Up $svc"
+            case "$svc" in
+              api)    DIR=packages/api ;;
+              public) DIR=packages/public ;;
+              web)    DIR=packages/web ;;
+              *)      DIR=. ;;
+            esac
+            echo "::group::Up $svc (from $DIR)"
             railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc"
-            railway up --service "$svc" --ci
+            ( cd "$DIR" && railway up --service "$svc" --ci )
             echo "::endgroup::"
           done
 
       - name: Wait for Railway build to progress
-        if: ${{ github.event_name == 'push' || steps.targets.outputs.action != 'logs' }}
+        if: ${{ steps.targets.outputs.services != '' && (github.event_name == 'push' || steps.targets.outputs.action != 'logs') }}
         run: sleep 60
 
       - name: Collect logs to file
         id: collect
-        if: ${{ always() }}
+        if: ${{ always() && steps.targets.outputs.services != '' }}
         run: |
           mkdir -p /tmp/railway-logs
           LOG_FILE="/tmp/railway-logs/combined.md"
@@ -148,7 +187,7 @@ jobs:
 
       - name: Ensure deploy-status issue exists
         id: issue
-        if: ${{ always() }}
+        if: ${{ always() && steps.targets.outputs.services != '' }}
         run: |
           ISSUE_NUMBER=$(gh issue list \
             --repo "$GITHUB_REPOSITORY" \
