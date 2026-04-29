@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { api } from '@/lib/api';
+// This page predates the snake_case ↔ camelCase api transformer and reads
+// camelCase fields directly from responses. Use the raw client to skip
+// the transform until the page can be migrated to snake_case.
+import { apiRaw as api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   Upload, Search, ChevronLeft, ChevronRight, UserSearch, Mail, Send,

@@ -24,14 +24,19 @@ function transformKeys(value: unknown, fn: (key: string) => string): unknown {
   return value;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  transform = true,
+): Promise<T> {
   const opts: RequestInit = {
     method,
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   };
   if (body !== undefined) {
-    opts.body = JSON.stringify(transformKeys(body, snakeToCamel));
+    opts.body = JSON.stringify(transform ? transformKeys(body, snakeToCamel) : body);
   }
   const res = await fetch(`${BASE_URL}${path}`, opts);
   if (!res.ok) {
@@ -40,7 +45,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (res.status === 204) return undefined as T;
   const json = await res.json();
-  return transformKeys(json, camelToSnake) as T;
+  return (transform ? transformKeys(json, camelToSnake) : json) as T;
 }
 
 export const api = {
@@ -48,4 +53,18 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
+};
+
+/**
+ * Same client, but skips the snake_case ↔ camelCase transform in both
+ * directions. Use for pages written before the transformer existed (and
+ * still expecting raw camelCase responses), or any caller that needs
+ * untouched payloads — for example, JSON-blob fields where transforming
+ * the value-side keys would corrupt user data.
+ */
+export const apiRaw = {
+  get: <T>(path: string) => request<T>('GET', path, undefined, false),
+  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body, false),
+  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body, false),
+  delete: <T>(path: string) => request<T>('DELETE', path, undefined, false),
 };
