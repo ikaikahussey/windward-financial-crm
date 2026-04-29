@@ -1,72 +1,118 @@
 #!/usr/bin/env bash
-# Deploy Windward Financial CRM to Railway.
+# Deploy Windward Financial CRM to Railway from your local machine.
 #
 # Usage:
 #   scripts/deploy.sh                   # deploy all three services
 #   scripts/deploy.sh api               # api only
-#   scripts/deploy.sh public            # astro public site only
-#   scripts/deploy.sh web               # admin crm only
-#   scripts/deploy.sh api public web    # explicit list
+#   scripts/deploy.sh public web        # explicit list
 #
-# Auth: either run `railway login` first, OR export RAILWAY_TOKEN
-# (project token from the Railway dashboard).
+# Auth: run `railway login` first (opens your browser), OR export RAILWAY_TOKEN
+# (account or project token from Railway dashboard).
+#
+# Optional env vars — if set, the script propagates them to the Railway service
+# before running `railway up`:
+#   API service:    REBUILD_WEBHOOK_URL
+#   Public service: PUBLIC_API_URL, PUBLIC_SITE_URL, PUBLIC_NLG_LOGIN_URL,
+#                   BUILD_DATABASE_URL
+#   Web service:    VITE_API_URL
 #
 # Service names are read from RAILWAY_API_SERVICE / RAILWAY_PUBLIC_SERVICE /
-# RAILWAY_WEB_SERVICE if set, otherwise fall back to "api" / "public" / "web".
+# RAILWAY_WEB_SERVICE if set, otherwise default to "api" / "public" / "web".
+#
+# Project ID + environment can be overridden with RAILWAY_PROJECT_ID and
+# RAILWAY_ENVIRONMENT — defaults match the existing Railway project.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+PROJECT_ID="${RAILWAY_PROJECT_ID:-6fbf7793-fe4e-4225-82c0-54defd227c2c}"
+ENVIRONMENT="${RAILWAY_ENVIRONMENT:-production}"
+
 API_SERVICE="${RAILWAY_API_SERVICE:-api}"
 PUBLIC_SERVICE="${RAILWAY_PUBLIC_SERVICE:-public}"
 WEB_SERVICE="${RAILWAY_WEB_SERVICE:-web}"
 
-require_auth() {
-  if ! railway whoami >/dev/null 2>&1; then
-    echo "✗ Not logged in to Railway." >&2
-    echo "  Run 'railway login' (interactive) or export RAILWAY_TOKEN=<project token>." >&2
-    exit 1
+c_blue=$(printf '\033[34m')
+c_green=$(printf '\033[32m')
+c_red=$(printf '\033[31m')
+c_yellow=$(printf '\033[33m')
+c_reset=$(printf '\033[0m')
+
+info()  { printf '%s→ %s%s\n' "$c_blue" "$*" "$c_reset"; }
+ok()    { printf '%s✓ %s%s\n' "$c_green" "$*" "$c_reset"; }
+warn()  { printf '%s! %s%s\n' "$c_yellow" "$*" "$c_reset"; }
+fatal() { printf '%s✗ %s%s\n' "$c_red" "$*" "$c_reset" >&2; exit 1; }
+
+# ── Pre-flight checks ─────────────────────────────────────────────────
+
+command -v railway >/dev/null 2>&1 || fatal "railway CLI not found. Install with: npm i -g @railway/cli"
+
+TOKEN_TYPE=""
+if railway whoami >/dev/null 2>&1; then
+  WHOAMI=$(railway whoami 2>&1 || true)
+  if echo "$WHOAMI" | grep -qiE "project token|environment token"; then
+    TOKEN_TYPE="project"
+  else
+    TOKEN_TYPE="account"
+  fi
+  ok "Railway auth: $TOKEN_TYPE token ($(echo "$WHOAMI" | head -1))"
+else
+  fatal "Not logged in. Run 'railway login' (opens browser) or export RAILWAY_TOKEN."
+fi
+
+# ── Helpers ───────────────────────────────────────────────────────────
+
+# link <service> — only needed for account tokens
+link_service() {
+  local svc="$1"
+  if [[ "$TOKEN_TYPE" == "account" ]]; then
+    railway link --project "$PROJECT_ID" --environment "$ENVIRONMENT" --service "$svc" >/dev/null 2>&1 \
+      || fatal "railway link failed for service '$svc' — does it exist in the project?"
   fi
 }
 
-require_link() {
-  if ! railway status >/dev/null 2>&1; then
-    echo "✗ This repo is not linked to a Railway project." >&2
-    echo "  Run 'railway link' from the repo root and pick the project." >&2
-    exit 1
+# set_var <service> <KEY> <VALUE> — no-op if VALUE is empty
+set_var() {
+  local svc="$1" key="$2" val="${3:-}"
+  if [[ -n "$val" ]]; then
+    info "  setting $key on $svc"
+    railway variables --service "$svc" --set "$key=$val" >/dev/null
   fi
+}
+
+# up_service <service> <package-dir>
+up_service() {
+  local svc="$1" dir="$2"
+  info "Deploying $svc from $dir/..."
+  link_service "$svc"
+  ( cd "$dir" && railway up --service "$svc" --ci ) || fatal "railway up failed for $svc"
+  ok "Triggered build for $svc"
 }
 
 deploy_api() {
-  echo "→ Deploying API ($API_SERVICE)…"
-  if [[ -n "${REBUILD_WEBHOOK_URL:-}" ]]; then
-    railway variables --service "$API_SERVICE" --set "REBUILD_WEBHOOK_URL=$REBUILD_WEBHOOK_URL"
-  fi
-  ( cd packages/api && railway up --service "$API_SERVICE" --detach )
+  link_service "$API_SERVICE"
+  set_var "$API_SERVICE" REBUILD_WEBHOOK_URL "${REBUILD_WEBHOOK_URL:-}"
+  up_service "$API_SERVICE" packages/api
 }
 
 deploy_public() {
-  echo "→ Deploying public Astro site ($PUBLIC_SERVICE)…"
-  local args=()
-  [[ -n "${PUBLIC_API_URL:-}" ]]      && args+=( --set "PUBLIC_API_URL=$PUBLIC_API_URL" )
-  [[ -n "${PUBLIC_SITE_URL:-}" ]]     && args+=( --set "PUBLIC_SITE_URL=$PUBLIC_SITE_URL" )
-  [[ -n "${PUBLIC_NLG_LOGIN_URL:-}" ]] && args+=( --set "PUBLIC_NLG_LOGIN_URL=$PUBLIC_NLG_LOGIN_URL" )
-  [[ -n "${BUILD_DATABASE_URL:-}" ]]  && args+=( --set "BUILD_DATABASE_URL=$BUILD_DATABASE_URL" )
-  if (( ${#args[@]} > 0 )); then
-    railway variables --service "$PUBLIC_SERVICE" "${args[@]}"
-  fi
-  ( cd packages/public && railway up --service "$PUBLIC_SERVICE" --detach )
+  link_service "$PUBLIC_SERVICE"
+  set_var "$PUBLIC_SERVICE" PUBLIC_API_URL       "${PUBLIC_API_URL:-}"
+  set_var "$PUBLIC_SERVICE" PUBLIC_SITE_URL      "${PUBLIC_SITE_URL:-}"
+  set_var "$PUBLIC_SERVICE" PUBLIC_NLG_LOGIN_URL "${PUBLIC_NLG_LOGIN_URL:-}"
+  set_var "$PUBLIC_SERVICE" BUILD_DATABASE_URL   "${BUILD_DATABASE_URL:-}"
+  up_service "$PUBLIC_SERVICE" packages/public
 }
 
 deploy_web() {
-  echo "→ Deploying admin CRM ($WEB_SERVICE)…"
-  ( cd packages/web && railway up --service "$WEB_SERVICE" --detach )
+  link_service "$WEB_SERVICE"
+  set_var "$WEB_SERVICE" VITE_API_URL "${VITE_API_URL:-}"
+  up_service "$WEB_SERVICE" packages/web
 }
 
-require_auth
-require_link
+# ── Main ──────────────────────────────────────────────────────────────
 
 targets=("$@")
 if (( ${#targets[@]} == 0 )); then
@@ -78,8 +124,10 @@ for t in "${targets[@]}"; do
     api)    deploy_api ;;
     public) deploy_public ;;
     web)    deploy_web ;;
-    *) echo "Unknown target: $t (expected api, public, or web)" >&2; exit 1 ;;
+    *) fatal "Unknown target: $t (expected api, public, or web)" ;;
   esac
 done
 
-echo "✓ Done. Check the Railway dashboard for build logs."
+echo
+ok "All deploys triggered. Watch progress:"
+printf '   %s\n' "https://railway.com/project/${PROJECT_ID}"
