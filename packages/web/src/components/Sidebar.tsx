@@ -14,6 +14,7 @@ import {
   CalendarDays,
   Target,
   Activity,
+  UserCog,
   Settings,
   LogOut,
   Menu,
@@ -173,6 +174,22 @@ export default function Sidebar() {
             )}
           </>
         )}
+
+        <NavLink
+          to="/users"
+          onClick={() => setMobileOpen(false)}
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              isActive
+                ? 'bg-primary-light/20 text-white'
+                : 'text-primary-light/70 hover:bg-primary-dark/50 hover:text-white'
+            )
+          }
+        >
+          <UserCog className="h-4 w-4 shrink-0" />
+          Users
+        </NavLink>
 
         <NavLink
           to="/settings"
