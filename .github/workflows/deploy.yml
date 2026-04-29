@@ -1,5 +1,8 @@
 name: Deploy to Railway
 
+# Triggers a Railway deploy for the api / public / web services.
+# A change to this file (or root package*.json) redeploys all three.
+
 on:
   push:
     branches: [main]
