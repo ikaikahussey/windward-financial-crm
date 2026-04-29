@@ -25,6 +25,8 @@ import eventsRoutes from './routes/events';
 import publicFormsRoutes from './routes/public-forms';
 import marketingRoutes from './routes/marketing';
 import marketingPublicRoutes from './routes/marketing-public';
+import staffCommentsRoutes from './routes/staff-comments';
+import analyticsRoutes from './routes/analytics';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -98,6 +100,8 @@ app.use('/api/reports', requireAuth, reportsRoutes);
 app.use('/api/quo', requireAuth, quoRoutes);
 app.use('/api/events', requireAuth, eventsRoutes);
 app.use('/api/marketing', requireAuth, marketingRoutes);
+app.use('/api/staff-comments', requireAuth, staffCommentsRoutes);
+app.use('/api/analytics', requireAuth, analyticsRoutes);
 app.use('/api/admin/quo', requireAuth, requireAdmin, adminQuoRoutes);
 app.use('/api/admin/leads', requireAuth, requireAdmin, adminLeadsRoutes);
 app.use('/api/admin/jobs', requireAuth, requireAdmin, adminJobsRoutes);

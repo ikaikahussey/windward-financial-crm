@@ -464,6 +464,88 @@ export const webhookEvents = pgTable(
   }),
 );
 
+// ── Staff feedback + product analytics ──
+
+export const staffCommentTypeEnum = pgEnum('staff_comment_type', [
+  'bug',
+  'improvement',
+  'question',
+  'praise',
+]);
+
+export const staffCommentStatusEnum = pgEnum('staff_comment_status', [
+  'open',
+  'in_progress',
+  'resolved',
+  'wont_fix',
+]);
+
+export const staffCommentPriorityEnum = pgEnum('staff_comment_priority', [
+  'low',
+  'normal',
+  'high',
+]);
+
+export const staffComments = pgTable(
+  'staff_comments',
+  {
+    id: serial('id').primaryKey(),
+    pagePath: varchar('page_path', { length: 255 }).notNull(),
+    pageLabel: varchar('page_label', { length: 255 }),
+    type: staffCommentTypeEnum('type').notNull().default('improvement'),
+    status: staffCommentStatusEnum('status').notNull().default('open'),
+    priority: staffCommentPriorityEnum('priority').notNull().default('normal'),
+    title: varchar('title', { length: 500 }).notNull(),
+    body: text('body'),
+    userAgent: text('user_agent'),
+    viewportWidth: integer('viewport_width'),
+    viewportHeight: integer('viewport_height'),
+    createdById: integer('created_by_id').references(() => users.id).notNull(),
+    resolvedAt: timestamp('resolved_at'),
+    resolvedById: integer('resolved_by_id').references(() => users.id),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    pageIdx: index('staff_comments_page_idx').on(t.pagePath),
+    createdIdx: index('staff_comments_created_idx').on(t.createdAt.desc()),
+    statusIdx: index('staff_comments_status_idx').on(t.status),
+  }),
+);
+
+export const staffCommentReplies = pgTable(
+  'staff_comment_replies',
+  {
+    id: serial('id').primaryKey(),
+    commentId: integer('comment_id').references(() => staffComments.id, { onDelete: 'cascade' }).notNull(),
+    body: text('body').notNull(),
+    createdById: integer('created_by_id').references(() => users.id).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    commentIdx: index('staff_comment_replies_comment_idx').on(t.commentId, t.createdAt),
+  }),
+);
+
+export const pageViews = pgTable(
+  'page_views',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id),
+    pagePath: varchar('page_path', { length: 255 }).notNull(),
+    pageLabel: varchar('page_label', { length: 255 }),
+    sessionId: varchar('session_id', { length: 64 }),
+    referrer: text('referrer'),
+    durationMs: integer('duration_ms'),
+    viewedAt: timestamp('viewed_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    viewedIdx: index('page_views_viewed_idx').on(t.viewedAt.desc()),
+    userViewedIdx: index('page_views_user_viewed_idx').on(t.userId, t.viewedAt.desc()),
+    pageViewedIdx: index('page_views_page_viewed_idx').on(t.pagePath, t.viewedAt.desc()),
+  }),
+);
+
 export const leadScoreHistory = pgTable(
   'lead_score_history',
   {

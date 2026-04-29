@@ -25,7 +25,11 @@ import MarketingAds from '@/pages/marketing/Ads';
 import QuoStatus from '@/pages/operations/QuoStatus';
 import LeadScoring from '@/pages/operations/LeadScoring';
 import AutomationActivity from '@/pages/operations/AutomationActivity';
+import StaffFeedback from '@/pages/operations/StaffFeedback';
+import Analytics from '@/pages/operations/Analytics';
 import Changelog from '@/pages/Changelog';
+import { StaffFeedbackWidget } from '@/components/StaffFeedbackWidget';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 function AdminOnly({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -35,6 +39,7 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { user, isLoading } = useAuth();
+  usePageTracking(!!user);
 
   if (isLoading) {
     return (
@@ -102,10 +107,27 @@ export default function App() {
               </AdminOnly>
             }
           />
+          <Route
+            path="/operations/feedback"
+            element={
+              <AdminOnly>
+                <StaffFeedback />
+              </AdminOnly>
+            }
+          />
+          <Route
+            path="/operations/analytics"
+            element={
+              <AdminOnly>
+                <Analytics />
+              </AdminOnly>
+            }
+          />
           <Route path="/changelog" element={<Changelog />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      <StaffFeedbackWidget />
     </div>
   );
 }
