@@ -151,6 +151,7 @@ export const policies = pgTable('policies', {
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
   contactId: integer('contact_id').references(() => contacts.id),
+  campaignId: integer('campaign_id'),
   assignedTo: integer('assigned_to').references(() => users.id).notNull(),
   createdBy: integer('created_by').references(() => users.id).notNull(),
   title: varchar('title', { length: 500 }).notNull(),

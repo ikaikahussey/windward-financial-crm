@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { tasks, activities, contacts } from '../db/schema';
+import { tasks, activities, contacts, users, campaigns } from '../db/schema';
 import { eq, and, gte, lte, isNull, isNotNull, desc, SQL } from 'drizzle-orm';
 
 const router = Router();
@@ -52,12 +52,64 @@ router.get('/', async (req: Request, res: Response) => {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const query = db.select().from(tasks);
+    const query = db
+      .select({
+        id: tasks.id,
+        contactId: tasks.contactId,
+        campaignId: tasks.campaignId,
+        assignedTo: tasks.assignedTo,
+        createdBy: tasks.createdBy,
+        title: tasks.title,
+        description: tasks.description,
+        dueDate: tasks.dueDate,
+        completedAt: tasks.completedAt,
+        priority: tasks.priority,
+        taskType: tasks.taskType,
+        createdAt: tasks.createdAt,
+        contact: {
+          id: contacts.id,
+          firstName: contacts.firstName,
+          lastName: contacts.lastName,
+        },
+        campaign: {
+          id: campaigns.id,
+          name: campaigns.name,
+        },
+        assignedToUser: {
+          id: users.id,
+          name: users.name,
+        },
+      })
+      .from(tasks)
+      .leftJoin(contacts, eq(contacts.id, tasks.contactId))
+      .leftJoin(campaigns, eq(campaigns.id, tasks.campaignId))
+      .leftJoin(users, eq(users.id, tasks.assignedTo));
     const rows = await (whereClause
       ? query.where(whereClause).orderBy(desc(tasks.dueDate)).limit(limitNum).offset(offset)
       : query.orderBy(desc(tasks.dueDate)).limit(limitNum).offset(offset));
 
-    return res.json(rows);
+    // Frontend reads `task.contact`, `task.campaign`, `task.assigned_to`,
+    // and infers a status from `completedAt`. Shape the row to match.
+    const shaped = rows.map((r) => ({
+      id: r.id,
+      contactId: r.contactId,
+      campaignId: r.campaignId,
+      assignedToId: r.assignedTo,
+      createdById: r.createdBy,
+      title: r.title,
+      description: r.description,
+      dueDate: r.dueDate,
+      completedAt: r.completedAt,
+      priority: r.priority,
+      type: r.taskType,
+      status: r.completedAt ? 'completed' : 'pending',
+      createdAt: r.createdAt,
+      contact: r.contact?.id ? r.contact : null,
+      campaign: r.campaign?.id ? r.campaign : null,
+      assignedTo: r.assignedToUser?.id ? r.assignedToUser : null,
+    }));
+
+    return res.json({ tasks: shaped });
   } catch (error) {
     console.error('List tasks error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -84,24 +136,64 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST / — create task
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { contactId, assignedTo, title, description, dueDate, priority, taskType } = req.body;
+    const {
+      contactId,
+      campaignId,
+      assignedTo,
+      assignedToId,
+      title,
+      description,
+      dueDate,
+      priority,
+      taskType,
+      type,
+    } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'title is required' });
     }
 
-    const [task] = await db.insert(tasks).values({
-      contactId: contactId || null,
-      assignedTo: assignedTo || req.session.userId!,
-      createdBy: req.session.userId!,
-      title,
-      description,
-      dueDate: dueDate ? new Date(dueDate) : null,
-      priority: priority || 'Normal',
-      taskType: taskType || 'Other',
-    }).returning();
+    // Map the frontend's snake-case priority/type values to the DB's
+    // title-case enum values. Unknown values pass through untouched.
+    const PRIORITY_MAP: Record<string, string> = {
+      low: 'Low',
+      medium: 'Normal',
+      normal: 'Normal',
+      high: 'High',
+      urgent: 'Urgent',
+    };
+    const TYPE_MAP: Record<string, string> = {
+      follow_up: 'Follow Up',
+      call: 'Call',
+      email: 'Email',
+      meeting: 'Meeting',
+      review: 'Review',
+      other: 'Other',
+    };
+    const rawPriority = (priority ?? '').toString();
+    const rawType = (taskType ?? type ?? '').toString();
+    const dbPriority = PRIORITY_MAP[rawPriority.toLowerCase()] ?? rawPriority ?? 'Normal';
+    const dbType = TYPE_MAP[rawType.toLowerCase()] ?? rawType ?? 'Other';
 
-    return res.status(201).json(task);
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        contactId: contactId ? parseInt(String(contactId), 10) : null,
+        campaignId: campaignId ? parseInt(String(campaignId), 10) : null,
+        assignedTo:
+          (assignedTo ?? assignedToId)
+            ? parseInt(String(assignedTo ?? assignedToId), 10)
+            : req.session.userId!,
+        createdBy: req.session.userId!,
+        title,
+        description,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        priority: (dbPriority || 'Normal') as never,
+        taskType: (dbType || 'Other') as never,
+      })
+      .returning();
+
+    return res.status(201).json({ task });
   } catch (error) {
     console.error('Create task error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -112,13 +204,35 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string, 10);
-    const updateData = { ...req.body };
-    delete updateData.id;
-    delete updateData.createdAt;
-    delete updateData.createdBy;
+    const body = req.body ?? {};
+    const updateData: Record<string, unknown> = {};
 
-    if (updateData.dueDate) {
-      updateData.dueDate = new Date(updateData.dueDate);
+    const ALLOWED = [
+      'contactId',
+      'campaignId',
+      'assignedTo',
+      'title',
+      'description',
+      'priority',
+      'taskType',
+    ];
+    for (const k of ALLOWED) {
+      if (k in body) updateData[k] = body[k];
+    }
+
+    if ('dueDate' in body) {
+      updateData.dueDate = body.dueDate ? new Date(body.dueDate) : null;
+    }
+
+    // `status` is a frontend-friendly alias for completedAt on/off.
+    if ('status' in body) {
+      updateData.completedAt =
+        body.status === 'completed' ? new Date() : null;
+    }
+    if ('completedAt' in body && body.completedAt !== undefined) {
+      updateData.completedAt = body.completedAt
+        ? new Date(body.completedAt)
+        : null;
     }
 
     const [updated] = await db

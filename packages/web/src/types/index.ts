@@ -110,6 +110,8 @@ export interface Task {
   completed_at?: string;
   contact_id?: string;
   contact?: Contact;
+  campaign_id?: string;
+  campaign?: { id: string | number; name: string };
   assigned_to_id: string;
   assigned_to?: User;
   created_by_id: string;

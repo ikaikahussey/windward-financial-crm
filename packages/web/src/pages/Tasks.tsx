@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import type { Task, User } from '@/types';
+import type { Task, User, Contact } from '@/types';
+
+interface CampaignOption {
+  id: string | number;
+  name: string;
+}
 import { Plus, X, CheckSquare, Clock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { PageHelp } from '@/components/PageHelp';
@@ -13,6 +18,8 @@ export default function Tasks() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [agents, setAgents] = useState<User[]>([]);
+  const [contactOptions, setContactOptions] = useState<Contact[]>([]);
+  const [campaignOptions, setCampaignOptions] = useState<CampaignOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'mine' | 'all'>('mine');
   const [filterPriority, setFilterPriority] = useState('');
@@ -38,8 +45,25 @@ export default function Tasks() {
 
   useEffect(() => {
     loadTasks();
-    api.get<{ users: User[] }>('/api/users').then((d) => setAgents(d.users || [])).catch(() => {});
   }, [tab, filterPriority, filterType, filterStatus, filterDue]);
+
+  // Pickers and agents only need to load once on mount.
+  useEffect(() => {
+    api.get<{ users: User[] }>('/api/users').then((d) => setAgents(d.users || [])).catch(() => {});
+    api
+      .get<{ contacts: Contact[] }>('/api/contacts?limit=500')
+      .then((d) => setContactOptions(d.contacts || []))
+      .catch(() => setContactOptions([]));
+    // /api/marketing/campaigns returns a raw array today, not a wrapped
+     // object. Accept both shapes so a future shape change doesn't break us.
+    api
+      .get<CampaignOption[] | { campaigns: CampaignOption[] }>('/api/marketing/campaigns')
+      .then((d) => {
+        const list = Array.isArray(d) ? d : (d?.campaigns ?? []);
+        setCampaignOptions(list);
+      })
+      .catch(() => setCampaignOptions([]));
+  }, []);
 
   async function toggleComplete(task: Task) {
     const newStatus = task.status === 'completed' ? 'pending' : 'completed';
@@ -163,6 +187,14 @@ export default function Tasks() {
                         {task.contact.first_name} {task.contact.last_name}
                       </button>
                     )}
+                    {task.campaign && (
+                      <button
+                        onClick={() => navigate(`/marketing/campaigns/${task.campaign?.id}`)}
+                        className="text-primary hover:underline"
+                      >
+                        Campaign: {task.campaign.name}
+                      </button>
+                    )}
                     {task.assigned_to && <span>Assigned: {task.assigned_to.name}</span>}
                   </div>
                 </div>
@@ -190,6 +222,8 @@ export default function Tasks() {
       {showCreate && (
         <CreateTaskDialog
           agents={agents}
+          contacts={contactOptions}
+          campaigns={campaignOptions}
           onClose={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); loadTasks(); }}
         />
@@ -198,7 +232,22 @@ export default function Tasks() {
   );
 }
 
-function CreateTaskDialog({ agents, onClose, onCreated }: { agents: User[]; onClose: () => void; onCreated: () => void }) {
+function CreateTaskDialog({
+  agents,
+  contacts,
+  campaigns,
+  onClose,
+  onCreated,
+}: {
+  agents: User[];
+  contacts: Contact[];
+  campaigns: CampaignOption[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  // "Related to" is a single radio: a task can be tied to a contact OR a
+  // campaign, not both. Tasks with neither are also valid.
+  const [relatedKind, setRelatedKind] = useState<'none' | 'contact' | 'campaign'>('none');
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -207,6 +256,7 @@ function CreateTaskDialog({ agents, onClose, onCreated }: { agents: User[]; onCl
     due_date: '',
     assigned_to_id: '',
     contact_id: '',
+    campaign_id: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -216,7 +266,15 @@ function CreateTaskDialog({ agents, onClose, onCreated }: { agents: User[]; onCl
     setSaving(true);
     setError('');
     try {
-      await api.post('/api/tasks', form);
+      const payload: Record<string, unknown> = { ...form };
+      // Only one of contact_id / campaign_id is sent based on the radio choice.
+      if (relatedKind !== 'contact') delete payload.contact_id;
+      if (relatedKind !== 'campaign') delete payload.campaign_id;
+      // Strip empty strings so the API doesn't try to coerce them.
+      for (const k of Object.keys(payload)) {
+        if (payload[k] === '' || payload[k] === undefined) delete payload[k];
+      }
+      await api.post('/api/tasks', payload);
       onCreated();
     } catch (err: any) {
       setError(err.message);
@@ -267,6 +325,52 @@ function CreateTaskDialog({ agents, onClose, onCreated }: { agents: User[]; onCl
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
             <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Related To</label>
+            <div className="flex gap-3 mb-2 text-sm">
+              {(['none', 'contact', 'campaign'] as const).map((k) => (
+                <label key={k} className="flex items-center gap-1.5 cursor-pointer capitalize">
+                  <input
+                    type="radio"
+                    name="related-kind"
+                    checked={relatedKind === k}
+                    onChange={() => setRelatedKind(k)}
+                    className="text-primary"
+                  />
+                  {k}
+                </label>
+              ))}
+            </div>
+            {relatedKind === 'contact' && (
+              <select
+                value={form.contact_id}
+                onChange={(e) => setForm({ ...form, contact_id: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">Select contact...</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.first_name} {c.last_name}
+                    {c.email ? ` — ${c.email}` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {relatedKind === 'campaign' && (
+              <select
+                value={form.campaign_id}
+                onChange={(e) => setForm({ ...form, campaign_id: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">Select campaign...</option>
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
