@@ -47,6 +47,8 @@ const operationsLinks = [
   { to: '/operations/quo', label: 'Quo Status' },
   { to: '/operations/leads', label: 'Lead Scoring' },
   { to: '/operations/automation', label: 'Automation Activity' },
+  { to: '/operations/feedback', label: 'Staff Feedback' },
+  { to: '/operations/analytics', label: 'Analytics' },
 ];
 
 export default function Sidebar() {
