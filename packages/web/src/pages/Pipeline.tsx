@@ -19,15 +19,15 @@ import { Search, GripVertical } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 
 const STAGES: { key: PipelineStage; label: string; color: string; bg: string }[] = [
-  { key: 'new_lead', label: 'New Lead', color: 'border-blue-400', bg: 'bg-blue-50' },
-  { key: 'contacted', label: 'Contacted', color: 'border-sky-400', bg: 'bg-sky-50' },
-  { key: 'discovery_scheduled', label: 'Discovery Sched.', color: 'border-indigo-400', bg: 'bg-indigo-50' },
-  { key: 'discovery_completed', label: 'Discovery Done', color: 'border-violet-400', bg: 'bg-violet-50' },
-  { key: 'proposal_sent', label: 'Proposal Sent', color: 'border-amber-400', bg: 'bg-amber-50' },
-  { key: 'follow_up', label: 'Follow Up', color: 'border-orange-400', bg: 'bg-orange-50' },
-  { key: 'closed_won', label: 'Closed Won', color: 'border-green-400', bg: 'bg-green-50' },
-  { key: 'closed_lost', label: 'Closed Lost', color: 'border-red-400', bg: 'bg-red-50' },
-  { key: 'nurture', label: 'Nurture', color: 'border-gray-400', bg: 'bg-gray-50' },
+  { key: 'New Lead', label: 'New Lead', color: 'border-blue-400', bg: 'bg-blue-50' },
+  { key: 'Contacted', label: 'Contacted', color: 'border-sky-400', bg: 'bg-sky-50' },
+  { key: 'Consultation Scheduled', label: 'Consult Sched.', color: 'border-indigo-400', bg: 'bg-indigo-50' },
+  { key: 'Consultation Completed', label: 'Consult Done', color: 'border-violet-400', bg: 'bg-violet-50' },
+  { key: 'Proposal Sent', label: 'Proposal Sent', color: 'border-amber-400', bg: 'bg-amber-50' },
+  { key: 'Application Submitted', label: 'App. Submitted', color: 'border-orange-400', bg: 'bg-orange-50' },
+  { key: 'Policy Issued', label: 'Policy Issued', color: 'border-emerald-400', bg: 'bg-emerald-50' },
+  { key: 'Active Client', label: 'Active Client', color: 'border-green-400', bg: 'bg-green-50' },
+  { key: 'Lost / Not Now', label: 'Lost / Not Now', color: 'border-gray-400', bg: 'bg-gray-50' },
 ];
 
 export default function Pipeline() {

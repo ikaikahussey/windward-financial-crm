@@ -13,6 +13,7 @@ import {
   BarChart3,
   CalendarDays,
   Target,
+  Activity,
   Settings,
   LogOut,
   Menu,
@@ -41,13 +42,22 @@ const marketingLinks = [
   { to: '/marketing/ads', label: 'Ad Campaigns' },
 ];
 
+const operationsLinks = [
+  { to: '/operations/quo', label: 'Quo Status' },
+  { to: '/operations/leads', label: 'Lead Scoring' },
+  { to: '/operations/automation', label: 'Automation Activity' },
+];
+
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
+  const [operationsOpen, setOperationsOpen] = useState(false);
   const location = useLocation();
 
   const isMarketingActive = location.pathname.startsWith('/marketing');
+  const isOperationsActive = location.pathname.startsWith('/operations');
+  const isAdmin = user?.role === 'admin';
 
   const navContent = (
     <div className="flex flex-col h-full">
@@ -118,6 +128,50 @@ export default function Sidebar() {
               </NavLink>
             ))}
           </div>
+        )}
+
+        {/* Operations Section (admin only) */}
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => setOperationsOpen(!operationsOpen)}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full',
+                isOperationsActive
+                  ? 'bg-primary-light/20 text-white'
+                  : 'text-primary-light/70 hover:bg-primary-dark/50 hover:text-white',
+              )}
+            >
+              <Activity className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left">Operations</span>
+              {operationsOpen || isOperationsActive ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </button>
+            {(operationsOpen || isOperationsActive) && (
+              <div className="ml-7 space-y-0.5">
+                {operationsLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'block px-3 py-2 rounded-md text-sm transition-colors',
+                        isActive
+                          ? 'text-white bg-primary-dark/50'
+                          : 'text-primary-light/60 hover:text-white hover:bg-primary-dark/30',
+                      )
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         <NavLink

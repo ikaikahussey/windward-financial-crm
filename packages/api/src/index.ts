@@ -4,11 +4,15 @@ import session from 'express-session';
 import cors from 'cors';
 import connectPgSimple from 'connect-pg-simple';
 import { errorHandler } from './middleware/errorHandler';
-import { requireAuth } from './middleware/auth';
+import { requireAuth, requireAdmin } from './middleware/auth';
 import { startCronJobs } from './services/cron';
 
 import authRoutes from './routes/auth';
 import contactsRoutes from './routes/contacts';
+import usersRoutes from './routes/users';
+import adminQuoRoutes from './routes/admin-quo';
+import adminLeadsRoutes from './routes/admin-leads';
+import adminJobsRoutes from './routes/admin-jobs';
 import tasksRoutes from './routes/tasks';
 import policiesRoutes from './routes/policies';
 import templatesRoutes from './routes/templates';
@@ -84,6 +88,7 @@ app.use('/api/auth', authRoutes);
 
 // Admin routes (auth required)
 app.use('/api/contacts', requireAuth, contactsRoutes);
+app.use('/api/users', requireAuth, usersRoutes);
 app.use('/api/tasks', requireAuth, tasksRoutes);
 app.use('/api/policies', requireAuth, policiesRoutes);
 app.use('/api/templates', requireAuth, templatesRoutes);
@@ -93,6 +98,9 @@ app.use('/api/reports', requireAuth, reportsRoutes);
 app.use('/api/quo', requireAuth, quoRoutes);
 app.use('/api/events', requireAuth, eventsRoutes);
 app.use('/api/marketing', requireAuth, marketingRoutes);
+app.use('/api/admin/quo', requireAuth, requireAdmin, adminQuoRoutes);
+app.use('/api/admin/leads', requireAuth, requireAdmin, adminLeadsRoutes);
+app.use('/api/admin/jobs', requireAuth, requireAdmin, adminJobsRoutes);
 
 // Error handler
 app.use(errorHandler);

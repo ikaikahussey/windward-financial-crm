@@ -15,15 +15,15 @@ import {
 import { format } from 'date-fns';
 
 const STAGES: { key: PipelineStage; label: string; color: string }[] = [
-  { key: 'new_lead', label: 'New Lead', color: 'bg-blue-100 text-blue-800' },
-  { key: 'contacted', label: 'Contacted', color: 'bg-sky-100 text-sky-800' },
-  { key: 'discovery_scheduled', label: 'Discovery Scheduled', color: 'bg-indigo-100 text-indigo-800' },
-  { key: 'discovery_completed', label: 'Discovery Completed', color: 'bg-violet-100 text-violet-800' },
-  { key: 'proposal_sent', label: 'Proposal Sent', color: 'bg-amber-100 text-amber-800' },
-  { key: 'follow_up', label: 'Follow Up', color: 'bg-orange-100 text-orange-800' },
-  { key: 'closed_won', label: 'Closed Won', color: 'bg-green-100 text-green-800' },
-  { key: 'closed_lost', label: 'Closed Lost', color: 'bg-red-100 text-red-800' },
-  { key: 'nurture', label: 'Nurture', color: 'bg-gray-100 text-gray-800' },
+  { key: 'New Lead', label: 'New Lead', color: 'bg-blue-100 text-blue-800' },
+  { key: 'Contacted', label: 'Contacted', color: 'bg-sky-100 text-sky-800' },
+  { key: 'Consultation Scheduled', label: 'Consult Scheduled', color: 'bg-indigo-100 text-indigo-800' },
+  { key: 'Consultation Completed', label: 'Consult Completed', color: 'bg-violet-100 text-violet-800' },
+  { key: 'Proposal Sent', label: 'Proposal Sent', color: 'bg-amber-100 text-amber-800' },
+  { key: 'Application Submitted', label: 'Application Sent', color: 'bg-orange-100 text-orange-800' },
+  { key: 'Policy Issued', label: 'Policy Issued', color: 'bg-emerald-100 text-emerald-800' },
+  { key: 'Active Client', label: 'Active Client', color: 'bg-green-100 text-green-800' },
+  { key: 'Lost / Not Now', label: 'Lost / Not Now', color: 'bg-gray-100 text-gray-800' },
 ];
 
 export default function Dashboard() {
@@ -46,20 +46,7 @@ export default function Dashboard() {
         const byStage: Record<string, number> = {};
         const stageRows = Array.isArray(s.contactsPerStage) ? s.contactsPerStage : (s.contactsPerStage?.rows ?? []);
         stageRows.forEach((r: any) => {
-          // Map DB stage names to frontend keys
-          const stageMap: Record<string, string> = {
-            'New Lead': 'new_lead',
-            'Contacted': 'contacted',
-            'Discovery Scheduled': 'discovery_scheduled',
-            'Discovery Completed': 'discovery_completed',
-            'Proposal Sent': 'proposal_sent',
-            'Follow Up': 'follow_up',
-            'Closed Won': 'closed_won',
-            'Closed Lost': 'closed_lost',
-            'Lost / Not Now': 'closed_lost',
-            'Nurture': 'nurture',
-          };
-          const key = stageMap[r.stage] || r.stage;
+          const key = r.stage;
           byStage[key] = (byStage[key] || 0) + (r.count || 0);
         });
         setStats({
@@ -141,7 +128,7 @@ export default function Dashboard() {
         <StatCard
           icon={<Users className="h-5 w-5" />}
           label="New Leads"
-          value={stats?.by_stage?.new_lead ?? 0}
+          value={stats?.by_stage?.['New Lead'] ?? 0}
           color="bg-indigo-50 text-indigo-700"
         />
       </div>

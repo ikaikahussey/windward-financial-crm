@@ -10,31 +10,40 @@ export interface User {
 }
 
 export type PipelineStage =
-  | 'new_lead'
-  | 'contacted'
-  | 'discovery_scheduled'
-  | 'discovery_completed'
-  | 'proposal_sent'
-  | 'follow_up'
-  | 'closed_won'
-  | 'closed_lost'
-  | 'nurture';
+  | 'New Lead'
+  | 'Contacted'
+  | 'Consultation Scheduled'
+  | 'Consultation Completed'
+  | 'Proposal Sent'
+  | 'Application Submitted'
+  | 'Policy Issued'
+  | 'Active Client'
+  | 'Lost / Not Now';
 
 export type EmploymentType =
-  | 'w2'
-  | 'self_employed'
-  | 'business_owner'
-  | 'retired'
-  | 'other';
+  | 'DOE Teacher'
+  | 'DOE Staff'
+  | 'State Employee'
+  | 'City & County'
+  | 'Other';
 
 export type Island =
-  | 'oahu'
-  | 'maui'
-  | 'big_island'
-  | 'kauai'
-  | 'molokai'
-  | 'lanai'
-  | 'out_of_state';
+  | 'Oahu'
+  | 'Maui'
+  | 'Big Island'
+  | 'Kauai'
+  | 'Molokai'
+  | 'Lanai';
+
+export type LeadSource =
+  | 'Webinar'
+  | 'Calculator'
+  | 'Referral'
+  | 'School Visit'
+  | 'Website'
+  | 'Social Media'
+  | 'Enrollment'
+  | 'Other';
 
 export interface Contact {
   id: string;

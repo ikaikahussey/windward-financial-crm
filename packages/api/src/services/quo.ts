@@ -258,6 +258,23 @@ class QuoService {
 
   // ── Webhooks ──
 
+  /**
+   * List all registered webhooks at OpenPhone. Returns an empty array if
+   * the API key is not configured (so callers can degrade gracefully).
+   */
+  async listWebhooks(): Promise<Array<{ id: string; events: string[]; url: string }>> {
+    if (!this.apiKey) return [];
+    const res = await this.request<{ data: Array<{ id: string; events: string[]; url: string }> }>(
+      'GET',
+      '/webhooks',
+    );
+    return res.data ?? [];
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.apiKey);
+  }
+
   async registerWebhooks(baseUrl: string): Promise<void> {
     const webhookEvents = [
       'call.completed',

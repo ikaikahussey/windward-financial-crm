@@ -12,27 +12,27 @@ interface ReportData {
 }
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
-  new_lead: 'New Lead',
-  contacted: 'Contacted',
-  discovery_scheduled: 'Discovery Scheduled',
-  discovery_completed: 'Discovery Completed',
-  proposal_sent: 'Proposal Sent',
-  follow_up: 'Follow Up',
-  closed_won: 'Closed Won',
-  closed_lost: 'Closed Lost',
-  nurture: 'Nurture',
+  'New Lead': 'New Lead',
+  'Contacted': 'Contacted',
+  'Consultation Scheduled': 'Consultation Scheduled',
+  'Consultation Completed': 'Consultation Completed',
+  'Proposal Sent': 'Proposal Sent',
+  'Application Submitted': 'Application Submitted',
+  'Policy Issued': 'Policy Issued',
+  'Active Client': 'Active Client',
+  'Lost / Not Now': 'Lost / Not Now',
 };
 
 const STAGE_COLORS: Record<string, string> = {
-  new_lead: 'bg-blue-500',
-  contacted: 'bg-sky-500',
-  discovery_scheduled: 'bg-indigo-500',
-  discovery_completed: 'bg-violet-500',
-  proposal_sent: 'bg-amber-500',
-  follow_up: 'bg-orange-500',
-  closed_won: 'bg-green-500',
-  closed_lost: 'bg-red-500',
-  nurture: 'bg-gray-500',
+  'New Lead': 'bg-blue-500',
+  'Contacted': 'bg-sky-500',
+  'Consultation Scheduled': 'bg-indigo-500',
+  'Consultation Completed': 'bg-violet-500',
+  'Proposal Sent': 'bg-amber-500',
+  'Application Submitted': 'bg-orange-500',
+  'Policy Issued': 'bg-emerald-500',
+  'Active Client': 'bg-green-500',
+  'Lost / Not Now': 'bg-gray-500',
 };
 
 export default function Reports() {

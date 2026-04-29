@@ -1,47 +1,107 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { callLogs, smsMessages, activities, contacts } from '../db/schema';
-import { eq, or, ilike } from 'drizzle-orm';
+import {
+  callLogs,
+  smsMessages,
+  activities,
+  contacts,
+  webhookEvents,
+} from '../db/schema';
+import { eq, ilike } from 'drizzle-orm';
 
 const router = Router();
 
 // Helper: look up contact by phone number
 async function findContactByPhone(phoneNumber: string) {
   if (!phoneNumber) return null;
-
-  // Normalize: strip non-digits, try matching with and without country code
   const digits = phoneNumber.replace(/\D/g, '');
   const last10 = digits.slice(-10);
+  if (!last10) return null;
   const pattern = `%${last10}`;
-
   const [contact] = await db
     .select({ id: contacts.id })
     .from(contacts)
     .where(ilike(contacts.phone, pattern))
     .limit(1);
-
   return contact ?? null;
 }
 
-// POST /calls — handle call webhooks
-router.post('/calls', async (req: Request, res: Response) => {
-  try {
-    const { event, data } = req.body;
+/**
+ * Wrap a webhook handler so every request writes a `webhook_events` row.
+ * The handler returns the matched contact id (or null); the wrapper handles
+ * status, error, and processing-time bookkeeping.
+ */
+function instrumented(
+  handler: (req: Request, res: Response) => Promise<{ matchedContactId: number | null; body?: unknown }>,
+) {
+  return async (req: Request, res: Response) => {
+    const start = Date.now();
+    const eventType =
+      typeof req.body?.event === 'string' ? req.body.event : 'unknown';
+    const [evt] = await db
+      .insert(webhookEvents)
+      .values({
+        source: 'quo',
+        eventType,
+        payload: req.body ?? {},
+        status: 'received',
+      })
+      .returning({ id: webhookEvents.id });
 
+    try {
+      const { matchedContactId, body } = await handler(req, res);
+      await db
+        .update(webhookEvents)
+        .set({
+          status: 'processed',
+          matchedContactId,
+          processingMs: Date.now() - start,
+        })
+        .where(eq(webhookEvents.id, evt.id));
+      if (body !== undefined && !res.headersSent) {
+        res.json(body);
+      }
+    } catch (err) {
+      const errMsg =
+        err instanceof Error ? err.stack ?? err.message : String(err);
+      await db
+        .update(webhookEvents)
+        .set({
+          status: 'error',
+          error: errMsg,
+          processingMs: Date.now() - start,
+        })
+        .where(eq(webhookEvents.id, evt.id));
+      console.error(`Quo webhook error (${eventType}):`, err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  };
+}
+
+// POST /calls
+router.post(
+  '/calls',
+  instrumented(async (req) => {
+    const { event, data } = req.body ?? {};
     if (!event || !data) {
-      return res.status(400).json({ error: 'event and data are required' });
+      return { matchedContactId: null, body: { error: 'event and data are required' } };
     }
 
     if (event === 'call.completed') {
       const participantNumber = data.participantNumber || data.from || data.to;
       const contact = await findContactByPhone(participantNumber);
-
       const direction = data.direction || 'inbound';
-      const activityType = direction === 'inbound' ? 'Call Inbound' : 'Call Outbound';
+      const activityType =
+        direction === 'inbound' ? 'Call Inbound' : 'Call Outbound';
 
-      // Upsert call log
       const existing = data.callId
-        ? await db.select().from(callLogs).where(eq(callLogs.quoCallId, data.callId)).limit(1)
+        ? await db
+            .select()
+            .from(callLogs)
+            .where(eq(callLogs.quoCallId, data.callId))
+            .limit(1)
         : [];
 
       if (existing.length > 0) {
@@ -55,20 +115,22 @@ router.post('/calls', async (req: Request, res: Response) => {
           })
           .where(eq(callLogs.id, existing[0].id));
       } else {
-        const [callLog] = await db.insert(callLogs).values({
-          quoCallId: data.callId || null,
-          contactId: contact?.id ?? null,
-          agentId: data.agentId ?? null,
-          direction,
-          status: data.status || 'completed',
-          durationSeconds: data.durationSeconds ?? data.duration,
-          startedAt: data.startedAt ? new Date(data.startedAt) : null,
-          completedAt: data.completedAt ? new Date(data.completedAt) : new Date(),
-          quoPhoneNumberId: data.quoPhoneNumberId ?? null,
-          participantNumber,
-        }).returning();
+        await db
+          .insert(callLogs)
+          .values({
+            quoCallId: data.callId || null,
+            contactId: contact?.id ?? null,
+            agentId: data.agentId ?? null,
+            direction,
+            status: data.status || 'completed',
+            durationSeconds: data.durationSeconds ?? data.duration,
+            startedAt: data.startedAt ? new Date(data.startedAt) : null,
+            completedAt: data.completedAt ? new Date(data.completedAt) : new Date(),
+            quoPhoneNumberId: data.quoPhoneNumberId ?? null,
+            participantNumber,
+          })
+          .returning();
 
-        // Create activity if contact matched
         if (contact?.id) {
           await db.insert(activities).values({
             contactId: contact.id,
@@ -79,8 +141,7 @@ router.post('/calls', async (req: Request, res: Response) => {
           });
         }
       }
-
-      return res.json({ received: true });
+      return { matchedContactId: contact?.id ?? null, body: { received: true } };
     }
 
     if (event === 'call.recording.completed') {
@@ -90,40 +151,43 @@ router.post('/calls', async (req: Request, res: Response) => {
           .set({ recordingUrl: data.recordingUrl })
           .where(eq(callLogs.quoCallId, data.callId));
       }
-      return res.json({ received: true });
+      return { matchedContactId: null, body: { received: true } };
     }
 
-    return res.json({ received: true, unhandled: event });
-  } catch (error) {
-    console.error('Call webhook error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    return { matchedContactId: null, body: { received: true, unhandled: event } };
+  }),
+);
 
-// POST /messages — handle message webhooks
-router.post('/messages', async (req: Request, res: Response) => {
-  try {
-    const { event, data } = req.body;
-
+// POST /messages
+router.post(
+  '/messages',
+  instrumented(async (req) => {
+    const { event, data } = req.body ?? {};
     if (!event || !data) {
-      return res.status(400).json({ error: 'event and data are required' });
+      return {
+        matchedContactId: null,
+        body: { error: 'event and data are required' },
+      };
     }
 
     if (event === 'message.received') {
       const participantNumber = data.from || data.participantNumber;
       const contact = await findContactByPhone(participantNumber);
 
-      const [message] = await db.insert(smsMessages).values({
-        quoMessageId: data.messageId || null,
-        contactId: contact?.id ?? null,
-        agentId: data.agentId ?? null,
-        direction: 'inbound',
-        body: data.body || data.content || '',
-        status: 'received',
-        quoPhoneNumberId: data.quoPhoneNumberId ?? null,
-        participantNumber,
-        sentAt: new Date(),
-      }).returning();
+      const [message] = await db
+        .insert(smsMessages)
+        .values({
+          quoMessageId: data.messageId || null,
+          contactId: contact?.id ?? null,
+          agentId: data.agentId ?? null,
+          direction: 'inbound',
+          body: data.body || data.content || '',
+          status: 'received',
+          quoPhoneNumberId: data.quoPhoneNumberId ?? null,
+          participantNumber,
+          sentAt: new Date(),
+        })
+        .returning();
 
       if (contact?.id) {
         await db.insert(activities).values({
@@ -135,7 +199,10 @@ router.post('/messages', async (req: Request, res: Response) => {
         });
       }
 
-      return res.json({ received: true, id: message.id });
+      return {
+        matchedContactId: contact?.id ?? null,
+        body: { received: true, id: message.id },
+      };
     }
 
     if (event === 'message.delivered') {
@@ -145,56 +212,72 @@ router.post('/messages', async (req: Request, res: Response) => {
           .set({ status: 'delivered' })
           .where(eq(smsMessages.quoMessageId, data.messageId));
       }
-      return res.json({ received: true });
+      return { matchedContactId: null, body: { received: true } };
     }
 
-    return res.json({ received: true, unhandled: event });
-  } catch (error) {
-    console.error('Message webhook error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    return {
+      matchedContactId: null,
+      body: { received: true, unhandled: event },
+    };
+  }),
+);
 
-// POST /call-summaries — update AI summary on call log
-router.post('/call-summaries', async (req: Request, res: Response) => {
-  try {
-    const { callId, summary } = req.body;
-
+// POST /call-summaries
+router.post(
+  '/call-summaries',
+  instrumented(async (req) => {
+    const { callId, summary } = req.body ?? {};
     if (!callId || !summary) {
-      return res.status(400).json({ error: 'callId and summary are required' });
+      return {
+        matchedContactId: null,
+        body: { error: 'callId and summary are required' },
+      };
     }
-
     await db
       .update(callLogs)
       .set({ aiSummary: summary })
       .where(eq(callLogs.quoCallId, callId));
 
-    return res.json({ received: true });
-  } catch (error) {
-    console.error('Call summary webhook error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const [match] = await db
+      .select({ contactId: callLogs.contactId })
+      .from(callLogs)
+      .where(eq(callLogs.quoCallId, callId))
+      .limit(1);
 
-// POST /call-transcripts — update transcription on call log
-router.post('/call-transcripts', async (req: Request, res: Response) => {
-  try {
-    const { callId, transcription } = req.body;
+    return {
+      matchedContactId: match?.contactId ?? null,
+      body: { received: true },
+    };
+  }),
+);
 
+// POST /call-transcripts
+router.post(
+  '/call-transcripts',
+  instrumented(async (req) => {
+    const { callId, transcription } = req.body ?? {};
     if (!callId || !transcription) {
-      return res.status(400).json({ error: 'callId and transcription are required' });
+      return {
+        matchedContactId: null,
+        body: { error: 'callId and transcription are required' },
+      };
     }
-
     await db
       .update(callLogs)
       .set({ transcription })
       .where(eq(callLogs.quoCallId, callId));
 
-    return res.json({ received: true });
-  } catch (error) {
-    console.error('Call transcript webhook error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const [match] = await db
+      .select({ contactId: callLogs.contactId })
+      .from(callLogs)
+      .where(eq(callLogs.quoCallId, callId))
+      .limit(1);
+
+    return {
+      matchedContactId: match?.contactId ?? null,
+      body: { received: true },
+    };
+  }),
+);
 
 export default router;

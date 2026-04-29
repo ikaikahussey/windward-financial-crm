@@ -21,6 +21,15 @@ import MarketingCampaignDetail from '@/pages/marketing/CampaignDetail';
 import MarketingWebinars from '@/pages/marketing/Webinars';
 import MarketingDistrictDetail from '@/pages/marketing/DistrictDetail';
 import MarketingAds from '@/pages/marketing/Ads';
+import QuoStatus from '@/pages/operations/QuoStatus';
+import LeadScoring from '@/pages/operations/LeadScoring';
+import AutomationActivity from '@/pages/operations/AutomationActivity';
+
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   const { user, isLoading } = useAuth();
@@ -66,6 +75,30 @@ export default function App() {
           <Route path="/marketing/campaigns/:id" element={<MarketingCampaignDetail />} />
           <Route path="/marketing/webinars" element={<MarketingWebinars />} />
           <Route path="/marketing/ads" element={<MarketingAds />} />
+          <Route
+            path="/operations/quo"
+            element={
+              <AdminOnly>
+                <QuoStatus />
+              </AdminOnly>
+            }
+          />
+          <Route
+            path="/operations/leads"
+            element={
+              <AdminOnly>
+                <LeadScoring />
+              </AdminOnly>
+            }
+          />
+          <Route
+            path="/operations/automation"
+            element={
+              <AdminOnly>
+                <AutomationActivity />
+              </AdminOnly>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

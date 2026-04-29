@@ -10,7 +10,9 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "process-email-queue": "tsx src/scripts/process-email-queue.ts",
-    "quo-sync": "tsx src/scripts/quo-sync.ts"
+    "quo-sync": "tsx src/scripts/quo-sync.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -40,8 +42,11 @@
     "@types/node": "^22.10.5",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.17",
+    "@types/supertest": "^7.2.0",
     "drizzle-kit": "^0.30.4",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4"
   }
 }

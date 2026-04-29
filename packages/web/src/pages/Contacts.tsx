@@ -2,50 +2,60 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import type { Contact, User, PipelineStage, EmploymentType, Island } from '@/types';
+import type { Contact, User, PipelineStage, EmploymentType, Island, LeadSource } from '@/types';
 import { Search, Plus, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 const STAGES: { value: PipelineStage; label: string }[] = [
-  { value: 'new_lead', label: 'New Lead' },
-  { value: 'contacted', label: 'Contacted' },
-  { value: 'discovery_scheduled', label: 'Discovery Scheduled' },
-  { value: 'discovery_completed', label: 'Discovery Completed' },
-  { value: 'proposal_sent', label: 'Proposal Sent' },
-  { value: 'follow_up', label: 'Follow Up' },
-  { value: 'closed_won', label: 'Closed Won' },
-  { value: 'closed_lost', label: 'Closed Lost' },
-  { value: 'nurture', label: 'Nurture' },
+  { value: 'New Lead', label: 'New Lead' },
+  { value: 'Contacted', label: 'Contacted' },
+  { value: 'Consultation Scheduled', label: 'Consultation Scheduled' },
+  { value: 'Consultation Completed', label: 'Consultation Completed' },
+  { value: 'Proposal Sent', label: 'Proposal Sent' },
+  { value: 'Application Submitted', label: 'Application Submitted' },
+  { value: 'Policy Issued', label: 'Policy Issued' },
+  { value: 'Active Client', label: 'Active Client' },
+  { value: 'Lost / Not Now', label: 'Lost / Not Now' },
 ];
 
 const EMPLOYMENT_TYPES: { value: EmploymentType; label: string }[] = [
-  { value: 'w2', label: 'W-2' },
-  { value: 'self_employed', label: 'Self Employed' },
-  { value: 'business_owner', label: 'Business Owner' },
-  { value: 'retired', label: 'Retired' },
-  { value: 'other', label: 'Other' },
+  { value: 'DOE Teacher', label: 'DOE Teacher' },
+  { value: 'DOE Staff', label: 'DOE Staff' },
+  { value: 'State Employee', label: 'State Employee' },
+  { value: 'City & County', label: 'City & County' },
+  { value: 'Other', label: 'Other' },
+];
+
+const LEAD_SOURCES: { value: LeadSource; label: string }[] = [
+  { value: 'Webinar', label: 'Webinar' },
+  { value: 'Calculator', label: 'Calculator' },
+  { value: 'Referral', label: 'Referral' },
+  { value: 'School Visit', label: 'School Visit' },
+  { value: 'Website', label: 'Website' },
+  { value: 'Social Media', label: 'Social Media' },
+  { value: 'Enrollment', label: 'Enrollment' },
+  { value: 'Other', label: 'Other' },
 ];
 
 const ISLANDS: { value: Island; label: string }[] = [
-  { value: 'oahu', label: 'Oahu' },
-  { value: 'maui', label: 'Maui' },
-  { value: 'big_island', label: 'Big Island' },
-  { value: 'kauai', label: 'Kauai' },
-  { value: 'molokai', label: 'Molokai' },
-  { value: 'lanai', label: 'Lanai' },
-  { value: 'out_of_state', label: 'Out of State' },
+  { value: 'Oahu', label: 'Oahu' },
+  { value: 'Maui', label: 'Maui' },
+  { value: 'Big Island', label: 'Big Island' },
+  { value: 'Kauai', label: 'Kauai' },
+  { value: 'Molokai', label: 'Molokai' },
+  { value: 'Lanai', label: 'Lanai' },
 ];
 
 const stageBadge: Record<PipelineStage, string> = {
-  new_lead: 'bg-blue-100 text-blue-800',
-  contacted: 'bg-sky-100 text-sky-800',
-  discovery_scheduled: 'bg-indigo-100 text-indigo-800',
-  discovery_completed: 'bg-violet-100 text-violet-800',
-  proposal_sent: 'bg-amber-100 text-amber-800',
-  follow_up: 'bg-orange-100 text-orange-800',
-  closed_won: 'bg-green-100 text-green-800',
-  closed_lost: 'bg-red-100 text-red-800',
-  nurture: 'bg-gray-100 text-gray-800',
+  'New Lead': 'bg-blue-100 text-blue-800',
+  'Contacted': 'bg-sky-100 text-sky-800',
+  'Consultation Scheduled': 'bg-indigo-100 text-indigo-800',
+  'Consultation Completed': 'bg-violet-100 text-violet-800',
+  'Proposal Sent': 'bg-amber-100 text-amber-800',
+  'Application Submitted': 'bg-orange-100 text-orange-800',
+  'Policy Issued': 'bg-emerald-100 text-emerald-800',
+  'Active Client': 'bg-green-100 text-green-800',
+  'Lost / Not Now': 'bg-gray-100 text-gray-800',
 };
 
 export default function Contacts() {
@@ -66,14 +76,15 @@ export default function Contacts() {
   function loadContacts() {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
-    if (filterStage) params.set('stage', filterStage);
+    if (filterStage) params.set('pipeline_stage', filterStage);
     if (filterEmployment) params.set('employment_type', filterEmployment);
     if (filterIsland) params.set('island', filterIsland);
-    if (filterAgent) params.set('agent_id', filterAgent);
+    if (filterAgent) params.set('assigned_agent_id', filterAgent);
     if (filterSource) params.set('lead_source', filterSource);
     params.set('sort', sortField);
     params.set('order', sortDir);
 
+    setLoading(true);
     api
       .get<{ contacts: Contact[] }>(`/api/contacts?${params}`)
       .then((d) => setContacts(d.contacts || []))
@@ -246,10 +257,15 @@ function CreateContactDialog({
     setSaving(true);
     setError('');
     try {
-      await api.post('/api/contacts', form);
+      const payload: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(form)) {
+        if (v !== '' && v !== undefined && v !== null) payload[k] = v;
+      }
+      if (form.assigned_agent_id) payload.assigned_agent_id = parseInt(form.assigned_agent_id, 10);
+      await api.post('/api/contacts', payload);
       onCreated();
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || 'Failed to create contact');
     } finally {
       setSaving(false);
     }
@@ -289,31 +305,24 @@ function CreateContactDialog({
               <label className="block text-sm font-medium text-gray-700 mb-1">Employment Type</label>
               <select value={form.employment_type} onChange={(e) => setForm({ ...form, employment_type: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
                 <option value="">Select...</option>
-                <option value="w2">W-2</option>
-                <option value="self_employed">Self Employed</option>
-                <option value="business_owner">Business Owner</option>
-                <option value="retired">Retired</option>
-                <option value="other">Other</option>
+                {EMPLOYMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Island</label>
               <select value={form.island} onChange={(e) => setForm({ ...form, island: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
                 <option value="">Select...</option>
-                <option value="oahu">Oahu</option>
-                <option value="maui">Maui</option>
-                <option value="big_island">Big Island</option>
-                <option value="kauai">Kauai</option>
-                <option value="molokai">Molokai</option>
-                <option value="lanai">Lanai</option>
-                <option value="out_of_state">Out of State</option>
+                {ISLANDS.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
-              <input value={form.lead_source} onChange={(e) => setForm({ ...form, lead_source: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <select value={form.lead_source} onChange={(e) => setForm({ ...form, lead_source: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="">Select...</option>
+                {LEAD_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Agent</label>

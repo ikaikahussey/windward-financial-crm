@@ -62,7 +62,7 @@ The default `.env` works for local development with the database credentials abo
 
 ```bash
 cd packages/api
-npm run db:migrate    # Creates the 15 CRM tables (+ marketing module)
+npm run db:migrate    # Creates the 15 CRM tables + 3 ops tables (+ marketing module)
 npm run db:seed       # Populates sample CRM data
 ```
 
@@ -135,7 +135,7 @@ windward-crm/
 │   │   ├── src/
 │   │   │   ├── index.ts         # Server entry point
 │   │   │   ├── db/
-│   │   │   │   ├── schema.ts    # Drizzle schema (15 CRM tables + marketing)
+│   │   │   │   ├── schema.ts    # Drizzle schema (15 CRM tables + 3 ops tables + marketing)
 │   │   │   │   ├── migrate.ts   # Migration runner
 │   │   │   │   ├── seed.ts      # Seed data script
 │   │   │   │   └── migrations/  # SQL migration files
@@ -278,7 +278,9 @@ New Lead → Contacted → Consultation Scheduled → Consultation Completed
 
 ## Database Schema
 
-15 core CRM tables managed by Drizzle ORM (the marketing module adds its own additional tables; Postgres-side count is higher).
+15 core CRM tables + 3 operations / observability tables (`job_runs`,
+`webhook_events`, `lead_score_history`) managed by Drizzle ORM. The marketing
+module adds its own additional tables; Postgres-side count is higher.
 
 **CRM Core (7):**
 - `users` — Agents and admins (3 roles: admin, agent, viewer)
@@ -377,7 +379,56 @@ POST   /api/webhooks/quo/calls
 POST   /api/webhooks/quo/messages
 POST   /api/webhooks/quo/call-summaries
 POST   /api/webhooks/quo/call-transcripts
+
+# Operations Dashboard (admin only)
+GET    /api/admin/quo/health
+GET    /api/admin/quo/webhook-events
+GET    /api/admin/quo/sync-history
+POST   /api/admin/quo/sync-now
+GET    /api/admin/leads/scoring/summary
+GET    /api/admin/leads/scoring/distribution
+GET    /api/admin/leads/scoring/list
+GET    /api/admin/leads/scoring/runs
+GET    /api/admin/leads/scoring/contact/:id
+GET    /api/admin/jobs/runs
+GET    /api/admin/jobs/heatmap
+GET    /api/admin/jobs/email-queue/summary
+GET    /api/admin/jobs/email-queue
+POST   /api/admin/jobs/email-queue/:id/retry
+POST   /api/admin/jobs/email-queue/retry-failed-today
+GET    /api/admin/jobs/automation-log
 ```
+
+---
+
+## Operations Dashboard
+
+Admin-only suite that surfaces the health of the Quo integration, the AI
+lead-scoring system, and every cron / background task. Three pages live under
+`/operations/*` and are visible in the sidebar only when `user.role === 'admin'`.
+
+- **Quo Status** (`/operations/quo`) — API key state, last/next sync, webhook
+  registration map (3/4 registered), 24-hour received/processed/error/unmatched
+  counters, and a paginated webhook activity feed with row-level JSON payload
+  drawer. "Sync Now" kicks a manual `quo-sync` job and polls until it lands.
+- **Lead Scoring** (`/operations/leads`) — total / hot / average score / auto-booked
+  KPIs, a 10-bucket distribution histogram (click a bucket to filter), filterable
+  leads table with score badge + Δ vs previous run, and a per-contact drawer
+  showing the factor-by-factor contribution breakdown plus a sparkline of recent
+  scores. A collapsible run history shows the last 30 lead-scoring jobs.
+- **Automation Activity** (`/operations/automation`) — three tabs:
+  - *Email Queue* — pending / sent / failed / oldest counters, filterable list,
+    per-row Retry, and bulk "Retry all failed today".
+  - *Stage Automation* — chronological list of pipeline transitions with the
+    side-effects (queued emails, notes, etc.) that fired alongside each one.
+  - *Background Jobs* — 30-day per-job heatmap (green/amber/red) plus a
+    filterable runs table with full log + error in a side drawer.
+
+Lead-score updates no longer pollute the activity feed. The score, previous
+score, factor breakdown, and originating job-run are all written to the new
+`lead_score_history` table; the dashboard reads from there. Cron-triggered
+runs and manual "Sync Now" runs both flow through `runJob()`, which writes a
+row to `job_runs` (status `running` → `success`/`partial`/`failed`).
 
 ---
 

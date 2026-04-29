@@ -22,15 +22,15 @@ import {
 import { format } from 'date-fns';
 
 const STAGES: { value: PipelineStage; label: string; color: string }[] = [
-  { value: 'new_lead', label: 'New Lead', color: 'bg-blue-100 text-blue-800' },
-  { value: 'contacted', label: 'Contacted', color: 'bg-sky-100 text-sky-800' },
-  { value: 'discovery_scheduled', label: 'Discovery Sched.', color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'discovery_completed', label: 'Discovery Done', color: 'bg-violet-100 text-violet-800' },
-  { value: 'proposal_sent', label: 'Proposal Sent', color: 'bg-amber-100 text-amber-800' },
-  { value: 'follow_up', label: 'Follow Up', color: 'bg-orange-100 text-orange-800' },
-  { value: 'closed_won', label: 'Closed Won', color: 'bg-green-100 text-green-800' },
-  { value: 'closed_lost', label: 'Closed Lost', color: 'bg-red-100 text-red-800' },
-  { value: 'nurture', label: 'Nurture', color: 'bg-gray-100 text-gray-800' },
+  { value: 'New Lead', label: 'New Lead', color: 'bg-blue-100 text-blue-800' },
+  { value: 'Contacted', label: 'Contacted', color: 'bg-sky-100 text-sky-800' },
+  { value: 'Consultation Scheduled', label: 'Consult Scheduled', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'Consultation Completed', label: 'Consult Completed', color: 'bg-violet-100 text-violet-800' },
+  { value: 'Proposal Sent', label: 'Proposal Sent', color: 'bg-amber-100 text-amber-800' },
+  { value: 'Application Submitted', label: 'Application Sent', color: 'bg-orange-100 text-orange-800' },
+  { value: 'Policy Issued', label: 'Policy Issued', color: 'bg-emerald-100 text-emerald-800' },
+  { value: 'Active Client', label: 'Active Client', color: 'bg-green-100 text-green-800' },
+  { value: 'Lost / Not Now', label: 'Lost / Not Now', color: 'bg-gray-100 text-gray-800' },
 ];
 
 export default function ContactDetail() {
@@ -73,7 +73,7 @@ export default function ContactDetail() {
 
   async function changeStage(stage: PipelineStage) {
     if (!id) return;
-    await api.patch(`/api/contacts/${id}/stage`, { stage });
+    await api.patch(`/api/contacts/${id}/stage`, { pipeline_stage: stage });
     loadAll();
   }
 

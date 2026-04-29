@@ -8,7 +8,9 @@ import {
   boolean,
   timestamp,
   json,
+  jsonb,
   pgEnum,
+  index,
 } from 'drizzle-orm/pg-core';
 
 // ── Enums ──
@@ -117,6 +119,8 @@ export const contacts = pgTable('contacts', {
   referralSource: text('referral_source'),
   assignedAgentId: integer('assigned_agent_id').references(() => users.id),
   notes: text('notes'),
+  leadScore: integer('lead_score'),
+  leadScoreUpdatedAt: timestamp('lead_score_updated_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   lastContactedAt: timestamp('last_contacted_at'),
@@ -413,4 +417,68 @@ export const geoAdCampaigns = pgTable('geo_ad_campaigns', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// ── Operations / observability tables ──
+
+export const jobRuns = pgTable(
+  'job_runs',
+  {
+    id: serial('id').primaryKey(),
+    jobName: varchar('job_name', { length: 64 }).notNull(),
+    startedAt: timestamp('started_at').defaultNow().notNull(),
+    finishedAt: timestamp('finished_at'),
+    status: varchar('status', { length: 16 }).notNull(),
+    itemsProcessed: integer('items_processed').notNull().default(0),
+    itemsFailed: integer('items_failed').notNull().default(0),
+    error: text('error'),
+    log: text('log'),
+    triggeredBy: varchar('triggered_by', { length: 16 }).notNull(),
+    triggeredByUserId: integer('triggered_by_user_id').references(() => users.id),
+  },
+  (t) => ({
+    jobNameStartedIdx: index('job_runs_job_name_started_idx').on(t.jobName, t.startedAt.desc()),
+    startedIdx: index('job_runs_started_idx').on(t.startedAt.desc()),
+  }),
+);
+
+export const webhookEvents = pgTable(
+  'webhook_events',
+  {
+    id: serial('id').primaryKey(),
+    source: varchar('source', { length: 32 }).notNull(),
+    eventType: varchar('event_type', { length: 64 }).notNull(),
+    payload: jsonb('payload').notNull(),
+    matchedContactId: integer('matched_contact_id').references(() => contacts.id),
+    status: varchar('status', { length: 16 }).notNull(),
+    error: text('error'),
+    processingMs: integer('processing_ms'),
+    receivedAt: timestamp('received_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    receivedIdx: index('webhook_events_received_idx').on(t.receivedAt.desc()),
+    eventTypeReceivedIdx: index('webhook_events_event_type_received_idx').on(
+      t.eventType,
+      t.receivedAt.desc(),
+    ),
+  }),
+);
+
+export const leadScoreHistory = pgTable(
+  'lead_score_history',
+  {
+    id: serial('id').primaryKey(),
+    contactId: integer('contact_id').references(() => contacts.id).notNull(),
+    score: integer('score').notNull(),
+    previousScore: integer('previous_score'),
+    factors: jsonb('factors').notNull(),
+    runId: integer('run_id').references(() => jobRuns.id),
+    scoredAt: timestamp('scored_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    contactScoredIdx: index('lead_score_history_contact_scored_idx').on(
+      t.contactId,
+      t.scoredAt.desc(),
+    ),
+  }),
+);
 
