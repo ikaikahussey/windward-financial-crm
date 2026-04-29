@@ -13,7 +13,7 @@ on:
       service:
         description: 'Service to target'
         required: true
-        default: 'api'
+        default: 'all'
         type: choice
         options:
           - api
@@ -23,7 +23,7 @@ on:
       action:
         description: 'Action'
         required: true
-        default: 'logs'
+        default: 'up'
         type: choice
         options:
           - logs
@@ -42,153 +42,28 @@ env:
 
 jobs:
   deploy:
-    name: ${{ github.event.inputs.action || 'auto' }} ${{ github.event.inputs.service || 'api' }}
+    name: ${{ github.event.inputs.action || 'auto' }} ${{ github.event.inputs.service || 'auto' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
     env:
+      # Railway CLI accepts either RAILWAY_TOKEN (project token) or
+      # RAILWAY_API_TOKEN (account token). We map the same secret to both
+      # so either token type works without re-configuring.
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Verify RAILWAY_TOKEN secret
-        run: |
-          if [ -z "$RAILWAY_API_TOKEN" ]; then
-            echo "::error::RAILWAY_TOKEN secret is not set. Add an account token at https://railway.com/account/tokens."
-            exit 1
-          fi
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli@latest
-
-      - name: Resolve target services
-        id: targets
-        run: |
-          set -e
-
-          # Manual dispatch: honor the input.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            SVC="${{ github.event.inputs.service || 'api' }}"
-            if [ "$SVC" = "all" ]; then
-              echo "services=api web public" >> "$GITHUB_OUTPUT"
-            else
-              echo "services=$SVC" >> "$GITHUB_OUTPUT"
-            fi
-            echo "action=${{ github.event.inputs.action || 'logs' }}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Push: deploy whichever packages actually changed.
-          BEFORE="${{ github.event.before }}"
-          AFTER="${{ github.sha }}"
-          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            BEFORE="${AFTER}^"
-          fi
-          CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null || git diff --name-only "${AFTER}^" "$AFTER")
-          echo "Changed files since $BEFORE:"
-          echo "$CHANGED" | sed 's/^/  /'
-
-          SERVICES=""
-          echo "$CHANGED" | grep -qE '^packages/api/'    && SERVICES="$SERVICES api"
-          echo "$CHANGED" | grep -qE '^packages/public/' && SERVICES="$SERVICES public"
-          echo "$CHANGED" | grep -qE '^packages/web/'    && SERVICES="$SERVICES web"
-
-          # Root-level or workflow changes → redeploy everything (safer).
-          if echo "$CHANGED" | grep -qE '^\.github/workflows/deploy\.yml$|^package\.json$|^package-lock\.json$'; then
-            SERVICES="api public web"
-          fi
-
-          SERVICES=$(echo "$SERVICES" | xargs)
-          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
-          echo "action=up" >> "$GITHUB_OUTPUT"
-          if [ -z "$SERVICES" ]; then
-            echo "No relevant package changes — skipping deploy."
-          fi
-
-      - name: Redeploy (re-run last build)
-        if: ${{ steps.targets.outputs.action == 'redeploy' && steps.targets.outputs.services != '' }}
-        run: |
-          set -e
-          for svc in ${{ steps.targets.outputs.services }}; do
-            echo "::group::Redeploy $svc"
-            railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc"
-            railway redeploy --service "$svc" --yes
-            echo "::endgroup::"
-          done
-
-      - name: Up (push current code as new build)
-        if: ${{ steps.targets.outputs.action == 'up' && steps.targets.outputs.services != '' }}
-        run: |
-          set -e
-          # Per-service build context: deploy from the package directory
-          # so Railway uses that package's nixpacks.toml / Dockerfile.
-          for svc in ${{ steps.targets.outputs.services }}; do
-            case "$svc" in
-              api)    DIR=packages/api ;;
-              public) DIR=packages/public ;;
-              web)    DIR=packages/web ;;
-              *)      DIR=. ;;
-            esac
-            echo "::group::Up $svc (from $DIR)"
-            railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc"
-            ( cd "$DIR" && railway up --service "$svc" --ci )
-            echo "::endgroup::"
-          done
-
-      - name: Wait for Railway build to progress
-        if: ${{ steps.targets.outputs.services != '' && (github.event_name == 'push' || steps.targets.outputs.action != 'logs') }}
-        run: sleep 60
-
-      - name: Collect logs to file
-        id: collect
-        if: ${{ always() && steps.targets.outputs.services != '' }}
-        run: |
-          mkdir -p /tmp/railway-logs
-          LOG_FILE="/tmp/railway-logs/combined.md"
-          {
-            echo "## Railway deploy log"
-            echo ""
-            echo "- **Run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-            echo "- **Trigger:** ${{ github.event_name }}${{ github.event.inputs.action && format(' / {0}', github.event.inputs.action) || '' }}"
-            echo "- **Services:** ${{ steps.targets.outputs.services }}"
-            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) — ${{ github.event.head_commit.message && github.event.head_commit.message || 'n/a' }}"
-            echo "- **Actor:** @${{ github.actor }}"
-            echo ""
-          } > "$LOG_FILE"
-
-          for svc in ${{ steps.targets.outputs.services }}; do
-            railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc" || continue
-
-            {
-              echo "### ${svc} — build logs"
-              echo ""
-              echo '```'
-              railway logs --service "$svc" --environment "$RAILWAY_ENVIRONMENT_NAME" --build --lines 200 2>&1 | tail -200 || echo "(no build logs available)"
-              echo '```'
-              echo ""
-              echo "### ${svc} — deployment logs"
-              echo ""
-              echo '```'
-              railway logs --service "$svc" --environment "$RAILWAY_ENVIRONMENT_NAME" --deployment --lines 200 2>&1 | tail -200 || echo "(no deployment logs available)"
-              echo '```'
-              echo ""
-            } >> "$LOG_FILE"
-          done
-
-          echo "log_file=$LOG_FILE" >> "$GITHUB_OUTPUT"
-          echo "::group::Collected log preview"
-          head -80 "$LOG_FILE"
-          echo "::endgroup::"
-
       - name: Ensure deploy-status issue exists
         id: issue
-        if: ${{ always() && steps.targets.outputs.services != '' }}
         run: |
+          set -e
           ISSUE_NUMBER=$(gh issue list \
             --repo "$GITHUB_REPOSITORY" \
             --state open \
@@ -206,15 +81,209 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --title "$STATUS_ISSUE_TITLE" \
               --label "$STATUS_ISSUE_LABEL" \
-              --body "Automated tracking issue for Railway deploy runs. Each workflow run appends a comment here with build + deployment logs so they're readable via the GitHub API. Do not close." \
+              --body "Automated tracking issue for Railway deploy runs. Each workflow run appends a comment here with build + deployment logs (or the failure reason). Do not close." \
               --json number \
               --jq '.number')
           fi
           echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
 
-      - name: Post logs as issue comment
-        if: ${{ always() && steps.issue.outputs.number != '' && steps.collect.outputs.log_file != '' }}
+      - name: Post run-start comment
         run: |
+          set -e
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo "## ⏳ Run started"
+            echo ""
+            echo "- **Run:** [${{ github.run_id }}]($RUN_URL)"
+            echo "- **Trigger:** ${{ github.event_name }}${{ github.event.inputs.action && format(' / {0} / {1}', github.event.inputs.action, github.event.inputs.service) || '' }}"
+            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) — ${{ github.event.head_commit.message && github.event.head_commit.message || 'n/a' }}"
+            echo "- **Actor:** @${{ github.actor }}"
+            echo ""
+            echo "_Final status will be appended to this issue when the run finishes._"
+          } | gh issue comment "${{ steps.issue.outputs.number }}" --repo "$GITHUB_REPOSITORY" --body-file -
+
+      - name: Verify RAILWAY_TOKEN secret
+        id: token
+        run: |
+          if [ -z "${RAILWAY_TOKEN:-}" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "reason=missing-secret" >> "$GITHUB_OUTPUT"
+            echo "::error::RAILWAY_TOKEN secret is not set in repo settings."
+            exit 0
+          fi
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install Railway CLI
+        if: steps.token.outputs.ok == 'true'
+        run: npm install -g @railway/cli@latest
+
+      - name: Detect Railway token type
+        if: steps.token.outputs.ok == 'true'
+        id: auth
+        run: |
+          set +e
+          OUT=$(railway whoami 2>&1)
+          RC=$?
+          set -e
+          echo "$OUT"
+          if [ $RC -eq 0 ] && echo "$OUT" | grep -qiE "logged in|email|user"; then
+            echo "token_type=account" >> "$GITHUB_OUTPUT"
+            echo "::notice::Detected account token."
+          elif echo "$OUT" | grep -qiE "project token|environment token"; then
+            echo "token_type=project" >> "$GITHUB_OUTPUT"
+            echo "::notice::Detected project token (auto-linked)."
+          else
+            # Fall back: assume account token; let the link step fail loudly if not.
+            echo "token_type=account" >> "$GITHUB_OUTPUT"
+            echo "::warning::Could not classify token from whoami output; treating as account."
+          fi
+
+      - name: Resolve target services
+        if: steps.token.outputs.ok == 'true'
+        id: targets
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SVC="${{ github.event.inputs.service || 'all' }}"
+            if [ "$SVC" = "all" ]; then
+              echo "services=api web public" >> "$GITHUB_OUTPUT"
+            else
+              echo "services=$SVC" >> "$GITHUB_OUTPUT"
+            fi
+            echo "action=${{ github.event.inputs.action || 'up' }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="${AFTER}^"
+          fi
+          CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null || git diff --name-only "${AFTER}^" "$AFTER")
+          echo "Changed files since $BEFORE:"
+          echo "$CHANGED" | sed 's/^/  /'
+
+          SERVICES=""
+          echo "$CHANGED" | grep -qE '^packages/api/'    && SERVICES="$SERVICES api"    || true
+          echo "$CHANGED" | grep -qE '^packages/public/' && SERVICES="$SERVICES public" || true
+          echo "$CHANGED" | grep -qE '^packages/web/'    && SERVICES="$SERVICES web"    || true
+
+          if echo "$CHANGED" | grep -qE '^\.github/workflows/deploy\.yml$|^package\.json$|^package-lock\.json$'; then
+            SERVICES="api public web"
+          fi
+
+          SERVICES=$(echo "$SERVICES" | xargs)
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          echo "action=up" >> "$GITHUB_OUTPUT"
+          if [ -z "$SERVICES" ]; then
+            echo "No relevant package changes — nothing to deploy."
+          fi
+
+      - name: Redeploy (re-run last build)
+        if: ${{ steps.token.outputs.ok == 'true' && steps.targets.outputs.action == 'redeploy' && steps.targets.outputs.services != '' }}
+        run: |
+          set -e
+          for svc in ${{ steps.targets.outputs.services }}; do
+            echo "::group::Redeploy $svc"
+            if [ "${{ steps.auth.outputs.token_type }}" = "account" ]; then
+              railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc"
+            fi
+            railway redeploy --service "$svc" --yes
+            echo "::endgroup::"
+          done
+
+      - name: Up (push current code as new build)
+        if: ${{ steps.token.outputs.ok == 'true' && steps.targets.outputs.action == 'up' && steps.targets.outputs.services != '' }}
+        run: |
+          set -e
+          for svc in ${{ steps.targets.outputs.services }}; do
+            case "$svc" in
+              api)    DIR=packages/api ;;
+              public) DIR=packages/public ;;
+              web)    DIR=packages/web ;;
+              *)      DIR=. ;;
+            esac
+            echo "::group::Up $svc (from $DIR)"
+            if [ "${{ steps.auth.outputs.token_type }}" = "account" ]; then
+              railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc"
+            fi
+            ( cd "$DIR" && railway up --service "$svc" --ci )
+            echo "::endgroup::"
+          done
+
+      - name: Wait for Railway build to progress
+        if: ${{ steps.token.outputs.ok == 'true' && steps.targets.outputs.services != '' && (github.event_name == 'push' || steps.targets.outputs.action != 'logs') }}
+        run: sleep 60
+
+      - name: Collect Railway logs
+        id: collect
+        if: ${{ always() && steps.token.outputs.ok == 'true' && steps.targets.outputs.services != '' }}
+        run: |
+          set +e
+          mkdir -p /tmp/railway-logs
+          LOG_FILE="/tmp/railway-logs/combined.md"
+          : > "$LOG_FILE"
+
+          for svc in ${{ steps.targets.outputs.services }}; do
+            if [ "${{ steps.auth.outputs.token_type }}" = "account" ]; then
+              railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$svc" >/dev/null 2>&1 || continue
+            fi
+            {
+              echo "### ${svc} — build logs"
+              echo ""
+              echo '```'
+              railway logs --service "$svc" --environment "$RAILWAY_ENVIRONMENT_NAME" --build --lines 200 2>&1 | tail -200 || echo "(no build logs available)"
+              echo '```'
+              echo ""
+              echo "### ${svc} — deployment logs"
+              echo ""
+              echo '```'
+              railway logs --service "$svc" --environment "$RAILWAY_ENVIRONMENT_NAME" --deployment --lines 200 2>&1 | tail -200 || echo "(no deployment logs available)"
+              echo '```'
+              echo ""
+            } >> "$LOG_FILE"
+          done
+
+          echo "log_file=$LOG_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Post final status comment
+        if: ${{ always() }}
+        run: |
+          set -e
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          OUTCOME="${{ job.status }}"
+          ICON="✅"
+          [ "$OUTCOME" = "failure" ] && ICON="❌"
+          [ "$OUTCOME" = "cancelled" ] && ICON="⚠️"
+
+          BODY=$(mktemp)
+          {
+            echo "## $ICON Run finished — $OUTCOME"
+            echo ""
+            echo "- **Run:** [${{ github.run_id }}]($RUN_URL)"
+            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})"
+            echo ""
+            if [ "${{ steps.token.outputs.ok }}" != "true" ]; then
+              echo "### ⛔ Skipped: \`RAILWAY_TOKEN\` secret is missing"
+              echo ""
+              echo "Add an account token at https://railway.com/account/tokens (or a project token from your project's Settings → Tokens) and set it as the \`RAILWAY_TOKEN\` repo secret."
+            elif [ -z "${{ steps.targets.outputs.services }}" ]; then
+              echo "### ℹ️ No services targeted"
+              echo ""
+              echo "The push didn't change any of \`packages/{api,public,web}\`, root \`package*.json\`, or this workflow file. Nothing to deploy."
+            else
+              echo "- **Services:** \`${{ steps.targets.outputs.services }}\`"
+              echo "- **Action:** \`${{ steps.targets.outputs.action }}\`"
+              echo "- **Token type:** \`${{ steps.auth.outputs.token_type }}\`"
+              echo ""
+              if [ -n "${{ steps.collect.outputs.log_file }}" ] && [ -s "${{ steps.collect.outputs.log_file }}" ]; then
+                cat "${{ steps.collect.outputs.log_file }}"
+              else
+                echo "_(no Railway logs collected — see the run page for details)_"
+              fi
+            fi
+          } > "$BODY"
+
           gh issue comment "${{ steps.issue.outputs.number }}" \
             --repo "$GITHUB_REPOSITORY" \
-            --body-file "${{ steps.collect.outputs.log_file }}"
+            --body-file "$BODY"
