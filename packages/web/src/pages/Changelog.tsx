@@ -11,7 +11,7 @@ export default function Changelog() {
         <p className="text-sm text-gray-500 mt-1">
           Currently in production:{' '}
           <a
-            href={`https://github.com/anthropics/windward-financial-crm/commit/${live}`}
+            href={`https://github.com/ikaikahussey/windward-financial-crm/commit/${live}`}
             target="_blank"
             rel="noreferrer"
             className="font-mono text-primary hover:underline"
