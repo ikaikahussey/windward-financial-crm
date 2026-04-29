@@ -52,19 +52,23 @@ services:
     depends_on:
       - api
 
-  public:
-    build:
-      context: .
-      dockerfile: packages/public/Dockerfile
-      args:
-        PUBLIC_API_URL: ${PUBLIC_API_URL:-}
-        PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:80}
-        PUBLIC_NLG_LOGIN_URL: ${PUBLIC_NLG_LOGIN_URL:-https://www.nationallife.com/login}
-        BUILD_DATABASE_URL: ${BUILD_DATABASE_URL:-}
-    ports:
-      - "5174:80"
-    depends_on:
-      - api
+  # The public site is deployed via Railway nixpacks (see
+  # packages/public/nixpacks.toml). For local dev run `cd packages/public &&
+  # npm run dev`. Re-add a Dockerfile here if you need docker-compose to
+  # build the static site too.
+  # public:
+  #   build:
+  #     context: .
+  #     dockerfile: packages/public/Dockerfile
+  #     args:
+  #       PUBLIC_API_URL: ${PUBLIC_API_URL:-}
+  #       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:80}
+  #       PUBLIC_NLG_LOGIN_URL: ${PUBLIC_NLG_LOGIN_URL:-https://www.nationallife.com/login}
+  #       BUILD_DATABASE_URL: ${BUILD_DATABASE_URL:-}
+  #   ports:
+  #     - "5174:80"
+  #   depends_on:
+  #     - api
 
   nginx:
     image: nginx:alpine
@@ -76,7 +80,6 @@ services:
     depends_on:
       - api
       - web
-      - public
 
 volumes:
   pgdata:
