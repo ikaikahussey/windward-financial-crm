@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import EnrollForm from '../components/islands/EnrollForm';
+---
+
+<BaseLayout
+  title="Enroll | Windward Financial"
+  description="Enroll in HomeHealth Care benefits and retirement planning services."
+>
+  <section class="bg-primary-dark py-16 md:py-20">
+    <div class="container-wide mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="font-heading text-4xl md:text-5xl text-white mb-4">Enroll</h1>
+      <p class="text-primary-light/80 text-xl max-w-2xl">
+        Enroll in the HomeHealth Care plan and protect your future.
+      </p>
+    </div>
+  </section>
+
+  <section class="section-padding bg-sand">
+    <div class="container-narrow mx-auto">
+      <div class="card mb-8">
+        <h2 class="font-heading text-2xl text-primary-dark mb-4">HomeHealth Care Plan</h2>
+        <p class="text-gray-600 leading-relaxed mb-4">
+          The HomeHealth Care plan provides coverage for home health care services, helping you maintain
+          independence and comfort. As a public employee in Hawaii, you have access to this important benefit
+          that can protect you and your family.
+        </p>
+        <p class="text-gray-600 leading-relaxed">
+          Complete the form below to start your enrollment. A licensed agent will follow up to walk you through
+          the plan details and ensure you select the right coverage for your needs.
+        </p>
+      </div>
+
+      <div class="card">
+        <EnrollForm client:load />
+      </div>
+    </div>
+  </section>
+</BaseLayout>

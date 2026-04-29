@@ -4,9 +4,11 @@ A full-stack application for **Windward Financial**, a Hawaiʻi-based insurance 
 
 The system has **two frontends** sharing **one backend**:
 
-- **Public Website** (`packages/public`) — Customer-facing marketing site replacing the existing windward.financial Squarespace site. Every form submission creates a lead in the CRM.
-- **Admin CRM** (`packages/web`) — Internal tool for the 5-person team to manage contacts, pipeline, policies, communications, and automation.
-- **API** (`packages/api`) — Node.js/Express backend serving both frontends.
+- **Public Website** (`packages/public`) — Astro static site replacing the existing windward.financial Squarespace site. Pages, testimonials, and team bios live as Markdown in the repo (Astro Content Collections); upcoming events are queried from Postgres at build time. Every form submission still creates a lead in the CRM via the API.
+- **Admin CRM** (`packages/web`) — Internal React + Vite tool for the 5-person team to manage contacts, pipeline, policies, communications, automation, and events.
+- **API** (`packages/api`) — Node.js/Express backend serving the admin CRM and the public site's form submissions.
+
+> **Content editing for non-developers — pending decision.** Until a CMS is wired up, content edits require a Markdown PR. Decap CMS is the likely default; this is intentionally deferred so the team can pick one tool once the new site is live.
 
 ---
 
@@ -60,17 +62,18 @@ The default `.env` works for local development with the database credentials abo
 
 ```bash
 cd packages/api
-npm run db:migrate    # Creates all 19 tables
-npm run db:seed       # Populates sample CRM data + CMS content
+npm run db:migrate    # Creates the 15 CRM tables (+ marketing module)
+npm run db:seed       # Populates sample CRM data
 ```
 
 The seed script creates:
-- 3 admin/agent users
+- 7 admin/agent users
 - 30 sample contacts across all pipeline stages and islands
-- 5 team members, 3 testimonials, 2 events, 3 blog posts
-- 9 CMS pages with full content for the public website
+- 2 events
 - 6-email nurture drip sequence templates
 - 8 sample policies, 10 tasks, 15 activity log entries
+
+Pages, testimonials, and team bios are no longer in the database — they live as Markdown in `packages/public/src/content/`.
 
 ### 5. Start all services
 
@@ -111,7 +114,7 @@ cd packages/web && npm run dev
 |-------|------------|
 | Backend | Node.js, Express, TypeScript |
 | Database | PostgreSQL 16 + Drizzle ORM |
-| Public Frontend | React 18, Vite, TailwindCSS |
+| Public Frontend | Astro 5 (static), React 18 islands, TailwindCSS, Markdown content |
 | Admin Frontend | React 18, Vite, TailwindCSS, shadcn/ui patterns |
 | Auth | Session-based with bcrypt, connect-pg-simple |
 | Phone/SMS | Quo (formerly OpenPhone) REST API |
@@ -132,64 +135,79 @@ windward-crm/
 │   │   ├── src/
 │   │   │   ├── index.ts         # Server entry point
 │   │   │   ├── db/
-│   │   │   │   ├── schema.ts    # Drizzle schema (19 tables)
+│   │   │   │   ├── schema.ts    # Drizzle schema (15 CRM tables + marketing)
 │   │   │   │   ├── migrate.ts   # Migration runner
 │   │   │   │   ├── seed.ts      # Seed data script
 │   │   │   │   └── migrations/  # SQL migration files
 │   │   │   ├── routes/
-│   │   │   │   ├── auth.ts      # Login/logout/session
-│   │   │   │   ├── contacts.ts  # Contact CRUD + pipeline
-│   │   │   │   ├── tasks.ts     # Task management
-│   │   │   │   ├── policies.ts  # Insurance policies
-│   │   │   │   ├── templates.ts # Email templates
+│   │   │   │   ├── auth.ts            # Login/logout/session
+│   │   │   │   ├── contacts.ts        # Contact CRUD + pipeline
+│   │   │   │   ├── tasks.ts           # Task management
+│   │   │   │   ├── policies.ts        # Insurance policies
+│   │   │   │   ├── templates.ts       # Email templates
 │   │   │   │   ├── appointments.ts
-│   │   │   │   ├── dashboard.ts # Stats and activity feed
-│   │   │   │   ├── reports.ts   # Funnel, lead sources, revenue
-│   │   │   │   ├── quo.ts       # Quo phone/SMS integration
-│   │   │   │   ├── webhooks-quo.ts # Quo webhook receivers
-│   │   │   │   ├── cms.ts       # CMS content management
-│   │   │   │   └── public.ts    # Public website API (no auth)
+│   │   │   │   ├── dashboard.ts       # Stats and activity feed
+│   │   │   │   ├── reports.ts         # Funnel, lead sources, revenue
+│   │   │   │   ├── events.ts          # Admin events CRUD (triggers rebuild)
+│   │   │   │   ├── quo.ts             # Quo phone/SMS integration
+│   │   │   │   ├── webhooks-quo.ts    # Quo webhook receivers
+│   │   │   │   └── public-forms.ts    # Public site form posts + read-only events
 │   │   │   ├── services/
-│   │   │   │   ├── automation.ts     # Stage-change automations
-│   │   │   │   ├── lead-capture.ts   # Lead creation from forms
-│   │   │   │   ├── lead-scoring.ts   # AI lead scoring (0-100)
-│   │   │   │   ├── email-sender.ts   # Email queue processor
-│   │   │   │   ├── quo.ts            # Quo API wrapper
-│   │   │   │   ├── ai-recommend.ts   # Claude product recommendations
-│   │   │   │   ├── content-engine.ts # Auto blog/newsletter generation
-│   │   │   │   └── cron.ts           # Scheduled background jobs
+│   │   │   │   ├── automation.ts        # Stage-change automations
+│   │   │   │   ├── lead-capture.ts      # Lead creation from forms
+│   │   │   │   ├── lead-scoring.ts      # AI lead scoring (0-100)
+│   │   │   │   ├── email-sender.ts      # Email queue processor
+│   │   │   │   ├── quo.ts               # Quo API wrapper
+│   │   │   │   ├── ai-recommend.ts      # Claude product recommendations
+│   │   │   │   ├── rebuild-trigger.ts   # POSTs REBUILD_WEBHOOK_URL
+│   │   │   │   └── cron.ts              # Scheduled background jobs
 │   │   │   └── middleware/
-│   │   │       ├── auth.ts           # Session auth guards
+│   │   │       ├── auth.ts              # Session auth guards
 │   │   │       └── errorHandler.ts
 │   │   └── Dockerfile
-│   ├── public/                  # Public marketing website
+│   ├── public/                  # Astro static public site
+│   │   ├── astro.config.mjs
 │   │   ├── src/
+│   │   │   ├── content/                 # Markdown content collections
+│   │   │   │   ├── config.ts            # Zod schemas for pages/testimonials/team
+│   │   │   │   ├── pages/*.md           # Page metadata
+│   │   │   │   ├── testimonials/*.md    # Client testimonials
+│   │   │   │   └── team/*.md            # Team bios
 │   │   │   ├── pages/
-│   │   │   │   ├── Home.tsx, About.tsx, Expertise.tsx
-│   │   │   │   ├── QualityCommitment.tsx, Contact.tsx
-│   │   │   │   ├── Schedule.tsx, Events.tsx, EventDetail.tsx
-│   │   │   │   ├── Calculator.tsx, Enroll.tsx
-│   │   │   │   ├── NationalLifeTransition.tsx
-│   │   │   │   ├── Blog.tsx, BlogPost.tsx, Resources.tsx
-│   │   │   │   └── (14 pages total)
-│   │   │   └── components/layout/
-│   │   │       ├── Header.tsx, Footer.tsx, Layout.tsx
-│   │   └── Dockerfile
+│   │   │   │   ├── index.astro          # Home (testimonials from MD)
+│   │   │   │   ├── about.astro          # About + team grid (MD)
+│   │   │   │   ├── expertise.astro
+│   │   │   │   ├── quality-commitment.astro
+│   │   │   │   ├── contact.astro
+│   │   │   │   ├── schedule-an-appointment.astro
+│   │   │   │   ├── calculator.astro     # Calculator React island
+│   │   │   │   ├── enroll.astro
+│   │   │   │   ├── national-life-transition.astro
+│   │   │   │   ├── resources.astro
+│   │   │   │   └── events/
+│   │   │   │       ├── index.astro      # Postgres query at build time
+│   │   │   │       └── [id].astro       # Dynamic route per event
+│   │   │   ├── layouts/BaseLayout.astro
+│   │   │   ├── components/Header.astro, Footer.astro
+│   │   │   ├── components/islands/      # React islands (forms, calculator, etc.)
+│   │   │   └── lib/events.ts            # Build-time DB query (read-only role)
+│   │   └── Dockerfile                   # Multi-stage: node builder → nginx
 │   └── web/                     # Admin CRM dashboard
 │       ├── src/
 │       │   ├── pages/
-│       │   │   ├── Dashboard.tsx      # Stats + mini Kanban
-│       │   │   ├── Contacts.tsx       # Searchable contact list
-│       │   │   ├── ContactDetail.tsx  # Full contact view + timeline
-│       │   │   ├── Pipeline.tsx       # Drag-and-drop Kanban
-│       │   │   ├── Tasks.tsx          # Task management
-│       │   │   ├── Templates.tsx      # Email template editor
-│       │   │   ├── Sequences.tsx      # Drip sequence visualizer
-│       │   │   ├── Appointments.tsx   # Calendar view
-│       │   │   ├── Communications.tsx # Calls + SMS inbox
-│       │   │   ├── Reports.tsx        # Funnel, sources, revenue
-│       │   │   ├── Settings.tsx       # Users, SMTP, Quo config
-│       │   │   └── cms/              # CMS management (6 pages)
+│       │   │   ├── Dashboard.tsx        # Stats + mini Kanban
+│       │   │   ├── Contacts.tsx         # Searchable contact list
+│       │   │   ├── ContactDetail.tsx    # Full contact view + timeline
+│       │   │   ├── Pipeline.tsx         # Drag-and-drop Kanban
+│       │   │   ├── Tasks.tsx            # Task management
+│       │   │   ├── Templates.tsx        # Email template editor
+│       │   │   ├── Sequences.tsx        # Drip sequence visualizer
+│       │   │   ├── Appointments.tsx     # Calendar view
+│       │   │   ├── Communications.tsx   # Calls + SMS inbox
+│       │   │   ├── Events.tsx           # Events CRUD + registrations viewer
+│       │   │   ├── Reports.tsx          # Funnel, sources, revenue
+│       │   │   ├── Settings.tsx         # Users, SMTP, Quo config
+│       │   │   └── marketing/           # Marketing module (campaigns, etc.)
 │       │   └── components/
 │       │       └── Sidebar.tsx
 │       └── Dockerfile
@@ -199,24 +217,24 @@ windward-crm/
 
 ## Public Website Pages
 
-The public site at `packages/public` replaces the existing Squarespace site. All content is CMS-driven (editable from the Admin CRM).
+The public site at `packages/public` is an Astro static site replacing the existing Squarespace site. Page text, testimonials, and team bios are Markdown files in `packages/public/src/content/`. Upcoming events are queried from Postgres at build time. Page loads issue zero database queries for content reads.
 
-| Route | Page | Description |
-|-------|------|-------------|
-| `/` | Home | Hero, services cards, testimonials carousel, newsletter signup |
-| `/about` | About | Company history, team member grid |
-| `/expertise` | Expertise | Insurance, annuity, and 403(b) product cards |
-| `/quality-commitment` | Quality Commitment | Mission, goals, affiliations |
-| `/contact` | Contact | Contact form → creates CRM lead |
-| `/schedule-an-appointment` | Schedule | Appointment request form → creates CRM lead + appointment |
-| `/events` | Events | Upcoming webinars/seminars list |
-| `/events/:id` | Event Detail | Event info + registration form → creates CRM lead |
-| `/calculator` | Calculator | Retirement readiness calculator with lead capture |
-| `/enroll` | Enroll | HomeHealth Care enrollment form |
-| `/national-life-transition` | NLG Transition | National Life Group account transfer info |
-| `/blog` | Blog | Paginated blog listing with tag filtering |
-| `/blog/:slug` | Blog Post | Full article with sidebar CTAs |
-| `/resources` | Resources | External links (ERS, EUTF, SSA, NLG login) |
+10 page types (12 total routes — `events/[id].astro` generates one route per upcoming event):
+
+| Route | Page | Source |
+|-------|------|--------|
+| `/` | Home | `content/pages/home.md` + testimonials collection |
+| `/about` | About | `content/pages/about.md` + team collection |
+| `/expertise` | Expertise | `content/pages/expertise.md` |
+| `/quality-commitment` | Quality Commitment | `content/pages/quality-commitment.md` |
+| `/contact` | Contact | Static + React form island |
+| `/schedule-an-appointment` | Schedule | Static + React form island |
+| `/events` | Events | Postgres query at build time |
+| `/events/:id` | Event Detail | Postgres query at build time + React registration form |
+| `/calculator` | Calculator | React calculator island |
+| `/enroll` | Enroll | Static + React form island |
+| `/national-life-transition` | NLG Transition | `content/pages/national-life-transition.md` |
+| `/resources` | Resources | `content/pages/resources.md` |
 
 **Every form submission on the public site automatically:**
 1. Creates or updates a contact in the CRM
@@ -241,9 +259,10 @@ The admin CRM at `packages/web` is the internal tool for managing the business.
 | `/sequences` | Sequences | Visual drip sequence builder with delay configuration |
 | `/appointments` | Appointments | Calendar and list view of scheduled consultations |
 | `/communications` | Communications | Unified inbox: calls and SMS messages from Quo |
+| `/events` | Events | List, create, edit, delete events; view registrations per event. Triggers public-site rebuild on save. |
 | `/reports` | Reports | Pipeline funnel, lead sources, agent activity, revenue |
 | `/settings` | Settings | User management, SMTP, Quo API integration |
-| `/cms/*` | CMS | Manage all public website content (pages, blog, team, events, testimonials, subscribers) |
+| `/marketing/*` | Marketing | District outreach, drip campaigns, webinars, ads (separate module) |
 
 ### Pipeline Stages
 
@@ -259,9 +278,9 @@ New Lead → Contacted → Consultation Scheduled → Consultation Completed
 
 ## Database Schema
 
-19 PostgreSQL tables managed by Drizzle ORM:
+15 core CRM tables managed by Drizzle ORM (the marketing module adds its own additional tables; Postgres-side count is higher).
 
-**CRM Core:**
+**CRM Core (7):**
 - `users` — Agents and admins (3 roles: admin, agent, viewer)
 - `contacts` — Leads and clients with employment, financial, and insurance data
 - `pipeline_entries` — Pipeline stage history (each contact has one active entry)
@@ -270,23 +289,24 @@ New Lead → Contacted → Consultation Scheduled → Consultation Completed
 - `activities` — Timeline log of all interactions per contact
 - `appointments` — Scheduled consultations
 
-**Email:**
+**Email (2):**
 - `email_templates` — Reusable templates with merge tags (`{{first_name}}`, etc.)
 - `email_queue` — Scheduled outbound emails processed every 5 minutes
 
-**Phone/SMS (Quo):**
+**Phone/SMS / Quo (3):**
 - `quo_phone_numbers` — Cached workspace phone numbers
 - `call_logs` — Inbound/outbound calls with recordings and transcriptions
 - `sms_messages` — Text message history
 
-**Public Website CMS:**
-- `site_pages` — CMS page content (JSON content blocks)
-- `testimonials` — Client testimonials for the public site
-- `team_members` — Staff bios and contact info
+**Events (3):**
 - `events` — Webinars and seminars
 - `event_registrations` — Event attendee registrations
-- `blog_posts` — Blog articles with Markdown/HTML body
 - `newsletter_subscribers` — Email list with source tracking
+
+> **Removed in this refactor:** `blog_posts`, `site_pages`, `testimonials`,
+> `team_members` (see `migrations/0003_drop_cms_and_blog.sql`). Pages,
+> testimonials, and team bios now live as Markdown in
+> `packages/public/src/content/`.
 
 ---
 
@@ -294,18 +314,12 @@ New Lead → Contacted → Consultation Scheduled → Consultation Completed
 
 ### Public API (no authentication)
 
-These endpoints serve the public website and accept form submissions:
+These endpoints accept form submissions from the static public site, plus the events read endpoints (also used by Astro at build time):
 
 ```
-GET    /api/public/pages              # List published CMS pages
-GET    /api/public/pages/:slug        # Get page content by slug
-GET    /api/public/testimonials       # List published testimonials
-GET    /api/public/team               # List published team members
 GET    /api/public/events             # List upcoming events
 GET    /api/public/events/:id         # Get event detail
 POST   /api/public/events/:id/register # Register for event → creates lead
-GET    /api/public/blog               # List published posts (paginated)
-GET    /api/public/blog/:slug         # Get blog post by slug
 POST   /api/public/contact            # Contact form → creates lead
 POST   /api/public/subscribe          # Newsletter signup
 POST   /api/public/calculator-lead    # Calculator submission → creates lead
@@ -335,6 +349,14 @@ GET|POST          /api/tasks, /api/policies, /api/templates, /api/appointments
 GET|PATCH|DELETE  /api/tasks/:id, /api/policies/:id, /api/templates/:id, /api/appointments/:id
 PATCH             /api/tasks/:id/complete
 
+# Events (admin) — CRUD + registrations; mutations fire REBUILD_WEBHOOK_URL
+GET    /api/events
+POST   /api/events
+GET    /api/events/:id
+PATCH  /api/events/:id
+DELETE /api/events/:id
+GET    /api/events/:id/registrations
+
 # Dashboard & Reports
 GET    /api/dashboard/stats           # Summary statistics
 GET    /api/dashboard/recent-activity # Last 20 activities
@@ -349,10 +371,6 @@ GET    /api/quo/calls                 # Call log history
 GET    /api/quo/messages              # SMS history
 GET    /api/quo/phone-numbers         # Workspace phone numbers
 POST   /api/quo/sync                  # Trigger manual sync
-
-# CMS (admin only)
-GET|POST          /api/cms/pages, /api/cms/testimonials, /api/cms/team, etc.
-GET|PATCH|DELETE  /api/cms/pages/:id, /api/cms/blog/:id, etc.
 
 # Webhooks (no auth — called by Quo servers)
 POST   /api/webhooks/quo/calls
@@ -386,13 +404,12 @@ When a contact's pipeline stage changes, the automation engine (`services/automa
 | Schedule | Job |
 |----------|-----|
 | Every 5 min | Process email queue |
+| Every 5 min | Process marketing campaign queue |
 | Every 15 min | Sync Quo calls and messages |
 | Daily 8am HST | Renewal reminders, annual reviews, birthday emails |
 | Daily 9am HST | Re-score all leads, auto-book hot leads |
-| Weekly Monday | Generate blog post draft (AI) |
-| Biweekly Friday | Generate newsletter draft (AI) |
-| Daily midnight | Sync Quo phone numbers |
-| Daily | Expire stale proposals (>14 days → Lost) |
+| Daily midnight HST | Expire stale proposals (>14 days → Lost) |
+| Monthly 1st 6am HST | Generate performance report |
 
 ### AI Lead Scoring
 
@@ -454,6 +471,11 @@ The CRM integrates with [Quo](https://www.openphone.com/) for business phone and
 | `ANTHROPIC_API_KEY` | Claude API key | For AI features |
 | `PUBLIC_URL` | Public site URL (CORS) | Yes |
 | `ADMIN_URL` | Admin CRM URL (CORS) | Yes |
+| `REBUILD_WEBHOOK_URL` | Webhook the API hits after admin events change, to rebuild the static public site | No (no-op when unset) |
+| `BUILD_DATABASE_URL` | Read-only Postgres role used by the Astro build to query upcoming events | No (build returns empty event list when unset) |
+| `PUBLIC_API_URL` | Base URL the Astro public site posts forms to (build-time arg) | Yes for non-localhost deploys |
+| `PUBLIC_SITE_URL` | Canonical URL for sitemap generation | No |
+| `PUBLIC_NLG_LOGIN_URL` | National Life Group customer login URL | No |
 
 ---
 
@@ -469,7 +491,7 @@ This starts 5 services:
 - **postgres** — PostgreSQL 16 with persistent volume
 - **api** — Express server (runs migrations on startup)
 - **web** — Admin CRM (nginx serving built React app)
-- **public** — Public website (nginx serving built React app)
+- **public** — Public website (nginx serving Astro static `dist/`)
 - **nginx** — Reverse proxy routing:
   - Port 80 (windward.financial) → public site
   - Port 8080 (admin.windward.financial) → admin CRM
@@ -479,11 +501,11 @@ This starts 5 services:
 
 The app is also designed for Railway:
 - **API** → Web service (Node.js, port from `$PORT`)
-- **Public** → Static site (Vite build output, `packages/public/dist`)
+- **Public** → Static site (Astro build output, `packages/public/dist`)
 - **Admin** → Static site (Vite build output, `packages/web/dist`)
 - **PostgreSQL** → Railway managed Postgres
 
-Set `VITE_API_URL` on both frontend services to point to the API service URL.
+Set `PUBLIC_API_URL` on the public service and `VITE_API_URL` on the admin service to point to the API service URL. Set `BUILD_DATABASE_URL` on the public service to a read-only Postgres role so the build can render upcoming events.
 
 ---
 
@@ -520,8 +542,9 @@ npm run build            # Compile TypeScript
 
 # Public Website
 cd packages/public
-npm run dev              # Vite dev server (port 5174)
-npm run build            # Production build to dist/
+npm run dev              # Astro dev server (port 5174)
+npm run build            # Astro static build to dist/
+npm run preview          # Preview the built site
 
 # Admin CRM
 cd packages/web

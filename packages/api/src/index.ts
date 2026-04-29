@@ -4,7 +4,7 @@ import session from 'express-session';
 import cors from 'cors';
 import connectPgSimple from 'connect-pg-simple';
 import { errorHandler } from './middleware/errorHandler';
-import { requireAuth, requireAdmin } from './middleware/auth';
+import { requireAuth } from './middleware/auth';
 import { startCronJobs } from './services/cron';
 
 import authRoutes from './routes/auth';
@@ -17,8 +17,8 @@ import dashboardRoutes from './routes/dashboard';
 import reportsRoutes from './routes/reports';
 import quoRoutes from './routes/quo';
 import webhooksQuoRoutes from './routes/webhooks-quo';
-import cmsRoutes from './routes/cms';
-import publicRoutes from './routes/public';
+import eventsRoutes from './routes/events';
+import publicFormsRoutes from './routes/public-forms';
 import marketingRoutes from './routes/marketing';
 import marketingPublicRoutes from './routes/marketing-public';
 
@@ -75,7 +75,7 @@ app.use(session({
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Public routes (no auth)
-app.use('/api/public', publicRoutes);
+app.use('/api/public', publicFormsRoutes);
 app.use('/api/public', marketingPublicRoutes);
 app.use('/api/webhooks/quo', webhooksQuoRoutes);
 
@@ -91,7 +91,7 @@ app.use('/api/appointments', requireAuth, appointmentsRoutes);
 app.use('/api/dashboard', requireAuth, dashboardRoutes);
 app.use('/api/reports', requireAuth, reportsRoutes);
 app.use('/api/quo', requireAuth, quoRoutes);
-app.use('/api/cms', requireAdmin, cmsRoutes);
+app.use('/api/events', requireAuth, eventsRoutes);
 app.use('/api/marketing', requireAuth, marketingRoutes);
 
 // Error handler
