@@ -2,9 +2,32 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { events, eventRegistrations } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { triggerRebuild } from '../services/rebuild-trigger';
+import { triggerRebuild, isRebuildConfigured } from '../services/rebuild-trigger';
 
 const router = Router();
+
+// GET /rebuild-status — does the API have a public-site rebuild hook?
+// Sits before the catch-all GET /:id to avoid being shadowed.
+router.get('/rebuild-status', async (_req: Request, res: Response) => {
+  return res.json({ configured: isRebuildConfigured() });
+});
+
+// POST /rebuild — manually fire the public-site rebuild webhook.
+router.post('/rebuild', async (req: Request, res: Response) => {
+  const reason = (req.body?.reason as string) ?? 'manual: events page';
+  const result = await triggerRebuild(reason);
+  if (!result.configured) {
+    return res.status(409).json({
+      ok: false,
+      configured: false,
+      error: 'REBUILD_WEBHOOK_URL is not set on the API',
+    });
+  }
+  if (!result.triggered) {
+    return res.status(502).json({ ok: false, ...result });
+  }
+  return res.json({ ok: true, ...result });
+});
 
 router.get('/', async (_req: Request, res: Response) => {
   try {

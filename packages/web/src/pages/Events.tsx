@@ -1,6 +1,18 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { api } from '@/lib/api';
-import { Plus, X, Pencil, Trash2, Users as UsersIcon, Calendar, MapPin, Link as LinkIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  Plus,
+  X,
+  Pencil,
+  Trash2,
+  Users as UsersIcon,
+  Calendar,
+  MapPin,
+  Link as LinkIcon,
+  Globe,
+  AlertTriangle,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { PageHelp } from '@/components/PageHelp';
 
@@ -58,6 +70,32 @@ export default function Events() {
   const [viewingRegs, setViewingRegs] = useState<EventRecord | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
+  const [rebuildConfigured, setRebuildConfigured] = useState<boolean | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMsg, setPublishMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  function loadRebuildStatus() {
+    api
+      .get<{ configured: boolean }>('/api/events/rebuild-status')
+      .then((d) => setRebuildConfigured(Boolean(d?.configured)))
+      .catch(() => setRebuildConfigured(false));
+  }
+
+  async function publishToPublic() {
+    setPublishing(true);
+    setPublishMsg(null);
+    try {
+      await api.post('/api/events/rebuild', { reason: 'manual: events page' });
+      setPublishMsg({ kind: 'ok', text: 'Rebuild triggered. The public site will refresh in a few minutes.' });
+    } catch (err) {
+      setPublishMsg({
+        kind: 'err',
+        text: err instanceof Error ? err.message : 'Failed to trigger rebuild',
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   function load() {
     setLoading(true);
@@ -70,6 +108,7 @@ export default function Events() {
 
   useEffect(() => {
     load();
+    loadRebuildStatus();
   }, []);
 
   function openCreate() {
@@ -143,15 +182,56 @@ export default function Events() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-primary-dark">Events</h1>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
-        >
-          <Plus className="h-4 w-4" /> New Event
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={publishToPublic}
+            disabled={publishing || rebuildConfigured === false}
+            title={
+              rebuildConfigured === false
+                ? 'Disabled: REBUILD_WEBHOOK_URL is not set on the API'
+                : 'Trigger a rebuild of the public website now'
+            }
+            className="flex items-center gap-2 bg-white border border-primary text-primary px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary-light/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Globe className="h-4 w-4" />
+            {publishing ? 'Publishing…' : 'Publish to public site'}
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
+          >
+            <Plus className="h-4 w-4" /> New Event
+          </button>
+        </div>
       </div>
+
+      {rebuildConfigured === false && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 flex items-start gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+          <div>
+            <strong>Public-site rebuilds are disabled.</strong> The API has no{' '}
+            <code className="font-mono text-xs">REBUILD_WEBHOOK_URL</code> set, so creating, editing,
+            or deleting an event here will not update windward.financial/events. Set the env var to
+            the public site's deploy-hook URL (Railway → public service → Settings → Deploy Hook)
+            and restart the API.
+          </div>
+        </div>
+      )}
+
+      {publishMsg && (
+        <div
+          className={cn(
+            'border rounded-xl p-3 text-sm',
+            publishMsg.kind === 'ok'
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-coral-light border-coral/30 text-coral',
+          )}
+        >
+          {publishMsg.text}
+        </div>
+      )}
 
       <PageHelp
         id="events"
