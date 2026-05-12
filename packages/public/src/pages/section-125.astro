@@ -1,0 +1,251 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const steps = [
+  {
+    number: '1',
+    title: 'Schedule a Consultation',
+    description: 'Learn how we can help. Meet with our team to discuss your district\'s needs and answer any questions.',
+  },
+  {
+    number: '2',
+    title: 'Census and Proposal',
+    description: 'Our team works with your payroll department to complete an employee census. We will prepare a proposal illustrating the impact on each employee\'s paycheck.',
+  },
+  {
+    number: '3',
+    title: 'Employee Enrollment',
+    description: 'We conduct enrollment and provide one-on-one support to your employees.',
+  },
+  {
+    number: '4',
+    title: 'Ongoing Administration',
+    description: 'Our continued relationship with the district and your employees allows us to manage ongoing compliance, inform and take care of new employees, and provide retirement planning guidance.',
+  },
+];
+
+const faqs = [
+  {
+    question: 'Does this cost the district anything?',
+    answer: 'Section 125 plans are funded entirely through employee pre-tax payroll deductions. There is no direct cost to the district to implement or maintain the plan — and in most cases the district realizes net savings through reduced FICA tax liability.',
+  },
+  {
+    question: 'How is a MEC plan different from our existing Section 125 POP or FSA?',
+    answer: 'Many districts are already familiar with Section 125 plans such as the Premium Only Plan (POP) and Flexible Spending Account (FSA). The MEC plan is a newer iteration that arose from the Minimum Essential Coverage requirement under the Affordable Care Act. It is designed to work alongside your existing Section 125 offerings — not replace them — while providing daily-use benefits that employees and their families can access immediately.',
+  },
+  {
+    question: 'Does this interfere with our current major medical plan?',
+    answer: 'No. The Section 125 MEC plan is designed to complement, not replace, your existing major medical coverage. It fills gaps in coverage for uninsured or part-time staff and adds preventative and primary care benefits without disrupting current plan structures.',
+  },
+  {
+    question: 'What is Minimum Essential Coverage (MEC)?',
+    answer: 'A MEC plan is a low-cost, preventative-focused health plan that meets the Affordable Care Act\'s minimum requirement to offer coverage. It provides employees access to preventive services, primary care, telehealth, and select prescription drugs — often at zero copay.',
+  },
+  {
+    question: 'Who handles enrollment and compliance?',
+    answer: 'We do. Our team handles everything from the employee census and plan document preparation through enrollment meetings, IRS compliance, non-discrimination testing, and ongoing administration. Your HR and payroll departments are minimally burdened.',
+  },
+  {
+    question: 'Can part-time employees participate?',
+    answer: 'Yes. One of the key advantages of the MEC plan is that it provides valuable coverage options for part-time or uninsured staff who may not qualify for your district\'s primary major medical plan.',
+  },
+];
+---
+
+<BaseLayout
+  title="Section 125 Cafeteria Plans for School Districts | Windward Financial"
+  description="IRS-approved Section 125 MEC plans that reduce payroll taxes for school districts and improve employee health benefits at zero cost to the district."
+>
+  <!-- Hero -->
+  <section class="relative bg-primary-dark overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary-dark via-primary to-ocean opacity-90"></div>
+    <div class="absolute inset-0 opacity-10">
+      <div class="absolute top-20 right-20 w-96 h-96 bg-primary-light rounded-full blur-3xl"></div>
+      <div class="absolute bottom-10 left-10 w-64 h-64 bg-ocean-light rounded-full blur-3xl"></div>
+    </div>
+    <div class="relative container-wide mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-36">
+      <div class="max-w-3xl">
+        <h1 class="font-heading text-4xl md:text-5xl lg:text-6xl text-white mb-6 leading-tight">
+          Section 125 Cafeteria Plans for School Districts
+        </h1>
+        <p class="text-xl md:text-2xl text-primary-light/90 mb-4 font-light leading-relaxed">
+          Help your employees save on taxes while providing valuable pre-tax benefits.
+        </p>
+        <p class="text-lg text-primary-light/70 mb-10">
+          This IRS-approved benefit generates significant FICA tax savings for the district, reduces employee healthcare costs, supports retention, and provides valuable coverage for part-time or uninsured staff — without interfering with your current major medical plan.
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a href="/schedule-an-appointment" class="btn-sand text-lg">
+            Join Our Free Webinar
+          </a>
+          <a href="/contact" class="inline-block border-2 border-primary-light/40 text-primary-light font-semibold px-6 py-3 rounded-lg hover:bg-primary-light/10 transition-colors text-lg">
+            Contact Us
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why School Districts Choose Section 125 -->
+  <section class="section-padding bg-sand">
+    <div class="container-wide mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="font-heading text-3xl md:text-4xl text-primary-dark mb-4">Why School Districts Choose Section 125</h2>
+        <p class="text-gray-600 max-w-2xl mx-auto text-lg">
+          Enhanced employee retention and health care benefits. Savings for the district.
+        </p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+
+        <!-- Box 1: District -->
+        <div class="card hover:shadow-xl transition-shadow">
+          <div class="w-14 h-14 bg-primary-light rounded-xl flex items-center justify-center mb-5">
+            <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+            </svg>
+          </div>
+          <h3 class="font-heading text-xl text-primary-dark mb-3">Net Savings for Your District</h3>
+          <p class="text-gray-600 leading-relaxed">
+            Every dollar put through the Section 125 plan reduces the employer's payroll tax liability by eliminating matching FICA taxes of 7.65%. This health benefit reduces both employee taxable income and employer payroll taxes, resulting in significant net savings for your district.
+          </p>
+        </div>
+
+        <!-- Box 2: Employee -->
+        <div class="card hover:shadow-xl transition-shadow">
+          <div class="w-14 h-14 bg-primary-light rounded-xl flex items-center justify-center mb-5">
+            <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+            </svg>
+          </div>
+          <h3 class="font-heading text-xl text-primary-dark mb-3">Happy and Healthy Employees</h3>
+          <p class="text-gray-600 leading-relaxed">
+            Robust health benefits for employees and their families. Participating in a Section 125 plan reduces an employee's taxable salary, increasing their spendable income. Most employees will see a net increase in take-home pay, allowing them to better prepare for their future.
+          </p>
+        </div>
+
+        <!-- Box 3: Implementation -->
+        <div class="card hover:shadow-xl transition-shadow">
+          <div class="w-14 h-14 bg-primary-light rounded-xl flex items-center justify-center mb-5">
+            <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="font-heading text-xl text-primary-dark mb-3">Simple Implementation</h3>
+          <p class="text-gray-600 leading-relaxed">
+            We handle everything from implementation to plan maintenance. Our team will enroll all eligible employees with minimal effort from your district's departments — including plan document preparation, IRS compliance, and ongoing non-discrimination testing.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="section-padding bg-white">
+    <div class="container-narrow mx-auto">
+      <h2 class="font-heading text-3xl md:text-4xl text-primary-dark mb-12 text-center">How It Works</h2>
+      <div class="space-y-8">
+        {steps.map((step) => (
+          <div class="flex gap-6 items-start">
+            <div class="shrink-0 w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+              <span class="text-white font-bold text-lg">{step.number}</span>
+            </div>
+            <div class="pt-1">
+              <h3 class="font-heading text-xl text-primary-dark mb-2">{step.title}</h3>
+              <p class="text-gray-600 leading-relaxed">{step.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- What is a Section 125 MEC Plan -->
+  <section class="section-padding bg-sand">
+    <div class="container-wide mx-auto">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="font-heading text-3xl md:text-4xl text-primary-dark mb-6">What Is a Section 125 MEC Plan?</h2>
+        <div class="space-y-4 text-gray-700 leading-relaxed text-lg">
+          <p>
+            Many districts are already familiar with Section 125 plans such as the Premium Only Plan (POP) and Flexible Spending Account (FSA). The MEC plan is a newer iteration of the Section 125 plan — one that arose from the Minimum Essential Coverage requirement under the Affordable Care Act. The MEC plan offers new benefits that employees and their families can use daily, and it is designed to work alongside your present Section 125 offerings.
+          </p>
+          <p>
+            A Section 125 MEC Plan, authorized by the IRS, allows employees to pay for this qualified benefit on a pre-tax basis. This reduces employees' taxable income and results in significant reductions to FICA taxes for both the employee and the district.
+          </p>
+          <p>
+            <strong>Minimum Essential Coverage (MEC)</strong> is a low-cost, preventative-focused health plan that meets the ACA's minimum requirement to offer coverage. It provides employees access to preventive services, primary care, telehealth, and select prescription drugs — often at zero copay.
+          </p>
+        </div>
+      </div>
+
+      <!-- Benefits grid -->
+      <div class="mt-14">
+        <h3 class="font-heading text-2xl text-primary-dark mb-8 text-center">Plan Benefits Include</h3>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {[
+            {
+              title: 'Unlimited Primary & Urgent Care',
+              body: 'Unlimited primary care doctor and urgent care visits for employees.',
+            },
+            {
+              title: 'Unlimited Virtual Care',
+              body: 'Free on-demand 24/7 virtual urgent care and scheduled primary care for employees and their families.',
+            },
+            {
+              title: '100% Preventive Care (MEC)',
+              body: 'Full coverage for annual check-ups, vaccinations, screenings, and wellness programs for employees.',
+            },
+            {
+              title: 'CHAMP Rx Plan',
+              body: 'A wide variety of free prescriptions — the most commonly prescribed drugs — for employees and their families.',
+            },
+            {
+              title: 'Mental Health Support',
+              body: 'Unlimited virtual mental health care for employees and their families, including $0 copay therapy and AI-driven peer support.',
+            },
+            {
+              title: 'Personal Health Manager & Retirement Planning',
+              body: 'Dedicated personal health management plus access to retirement planning guidance for employees.',
+            },
+          ].map((benefit) => (
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-primary-light/30">
+              <h4 class="font-heading text-lg text-primary-dark mb-2">{benefit.title}</h4>
+              <p class="text-gray-600 text-sm leading-relaxed">{benefit.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQs -->
+  <section class="section-padding bg-white">
+    <div class="container-narrow mx-auto">
+      <h2 class="font-heading text-3xl md:text-4xl text-primary-dark mb-10 text-center">Frequently Asked Questions</h2>
+      <div class="space-y-6">
+        {faqs.map((faq) => (
+          <div class="border border-gray-200 rounded-xl p-6">
+            <h3 class="font-heading text-xl text-primary-dark mb-3">{faq.question}</h3>
+            <p class="text-gray-600 leading-relaxed">{faq.answer}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section-padding bg-primary-dark">
+    <div class="container-narrow mx-auto text-center">
+      <h2 class="font-heading text-3xl md:text-4xl text-white mb-4">Ready to Bring Tax Savings to Your District?</h2>
+      <p class="text-primary-light/80 text-lg mb-8 max-w-2xl mx-auto">
+        Schedule a free consultation to learn how we can help you.
+      </p>
+      <a href="/schedule-an-appointment" class="btn-sand text-lg">
+        Schedule a Free Consultation
+      </a>
+      <p class="text-primary-light/60 mt-4">
+        Or call us at <a href="tel:+18888941884" class="text-primary-light hover:underline">(888) 894-1884</a>
+      </p>
+    </div>
+  </section>
+</BaseLayout>
