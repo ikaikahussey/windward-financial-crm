@@ -1,24 +1,48 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Calculator from '../components/islands/Calculator';
 ---
 
 <BaseLayout
-  title="Retirement Calculator | Windward Financial"
-  description="Calculate your retirement readiness with our free retirement planning calculator."
+  title="Retirement Resources | Windward Financial"
+  description="Access the official ERS retirement calculator and planning resources for Hawaii public employees."
 >
   <section class="bg-primary-dark py-16 md:py-20">
     <div class="container-wide mx-auto px-4 sm:px-6 lg:px-8">
       <h1 class="font-heading text-4xl md:text-5xl text-white mb-4">Retirement Calculator</h1>
       <p class="text-primary-light/80 text-xl max-w-2xl">
-        Estimate your retirement readiness based on your ERS pension, 403(b) savings, and Social Security.
+        Use the official ERS calculator to estimate your retirement benefit.
       </p>
     </div>
   </section>
 
   <section class="section-padding bg-sand">
-    <div class="container-wide mx-auto">
-      <Calculator client:load />
+    <div class="container-narrow mx-auto text-center">
+      <p class="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
+        The Employees' Retirement System of the State of Hawaii provides an official benefit estimator for active members. Use the link below to access it directly on the ERS website.
+      </p>
+      <a
+        href="https://ers.ehawaii.gov"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-primary text-lg"
+      >
+        Go to ERS Retirement Calculator &rarr;
+      </a>
+      <p class="text-gray-500 text-sm mt-6">
+        Opens the official Hawaii Employees' Retirement System website.
+      </p>
+    </div>
+  </section>
+
+  <section class="section-padding bg-white">
+    <div class="container-narrow mx-auto text-center">
+      <h2 class="font-heading text-3xl text-primary-dark mb-4">Have Questions About Your Results?</h2>
+      <p class="text-gray-600 text-lg mb-8">
+        Our team can help you understand your ERS benefit estimate and how it fits into your overall retirement plan.
+      </p>
+      <a href="/schedule-an-appointment" class="btn-primary text-lg">
+        Schedule a Free Consultation
+      </a>
     </div>
   </section>
 </BaseLayout>
