@@ -1,5 +1,7 @@
 # Windward Financial CRM & Public Website
 
+Deployed on Railway
+
 A full-stack application for **Windward Financial**, a Hawaiʻi-based insurance and retirement planning brokerage serving public employees (DOE teachers, state workers, city & county employees).
 
 The system has **two frontends** sharing **one backend**:

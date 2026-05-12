@@ -66,9 +66,6 @@ jobs:
       - name: Ensure deploy-status issue exists
         id: issue
         run: |
-          # Don't use `set -e` here — gh sub-commands can exit non-zero on
-          # missing labels or empty result sets and that's expected.
-
           # Pre-create the label so the issue-list query below never fails on
           # a missing label. Idempotent.
           gh label create "$STATUS_ISSUE_LABEL" \
@@ -85,17 +82,27 @@ jobs:
             --jq '.[0].number // empty' 2>/dev/null || echo "")
 
           if [ -z "$ISSUE_NUMBER" ]; then
-            ISSUE_NUMBER=$(gh issue create \
+            # Create issue and extract number from URL in output
+            ISSUE_OUTPUT=$(gh issue create \
               --repo "$GITHUB_REPOSITORY" \
               --title "$STATUS_ISSUE_TITLE" \
               --label "$STATUS_ISSUE_LABEL" \
-              --body "Automated tracking issue for Railway deploy runs. Each workflow run appends a comment here with build + deployment logs (or the failure reason). Do not close." \
-              --json number \
-              --jq '.number' 2>&1) || {
-                echo "::error::Failed to create deploy-status issue: $ISSUE_NUMBER"
-                exit 1
-              }
+              --body "Automated tracking issue for Railway deploy runs. Each workflow run appends a comment here with build + deployment logs (or the failure reason). Do not close." 2>&1)
+            
+            if [ $? -ne 0 ]; then
+              echo "::error::Failed to create deploy-status issue: $ISSUE_OUTPUT"
+              exit 1
+            fi
+            
+            # Extract issue number from output (format: "https://github.com/owner/repo/issues/123")
+            ISSUE_NUMBER=$(echo "$ISSUE_OUTPUT" | grep -oP 'issues/\K[0-9]+' | tail -1)
+            
+            if [ -z "$ISSUE_NUMBER" ]; then
+              echo "::error::Could not extract issue number from: $ISSUE_OUTPUT"
+              exit 1
+            fi
           fi
+          
           echo "Issue: #$ISSUE_NUMBER"
           echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
 
@@ -108,7 +115,7 @@ jobs:
             echo ""
             echo "- **Run:** [${{ github.run_id }}]($RUN_URL)"
             echo "- **Trigger:** ${{ github.event_name }}${{ github.event.inputs.action && format(' / {0} / {1}', github.event.inputs.action, github.event.inputs.service) || '' }}"
-            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) — ${{ github.event.head_commit.message && github.event.head_commit.message || 'n/a' }}"
+            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) — ${{ github.event.head_commit.message && github.event.head_c[...]
             echo "- **Actor:** @${{ github.actor }}"
             echo ""
             echo "_Final status will be appended to this issue when the run finishes._"
