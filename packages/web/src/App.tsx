@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Contacts from '@/pages/Contacts';
+import Sheets from '@/pages/Sheets';
 import ContactDetail from '@/pages/ContactDetail';
 import Pipeline from '@/pages/Pipeline';
 import Tasks from '@/pages/Tasks';
@@ -22,6 +23,11 @@ import MarketingCampaignDetail from '@/pages/marketing/CampaignDetail';
 import MarketingWebinars from '@/pages/marketing/Webinars';
 import MarketingDistrictDetail from '@/pages/marketing/DistrictDetail';
 import MarketingAds from '@/pages/marketing/Ads';
+import TpaPlans from '@/pages/tpa/Plans';
+import TpaParticipants from '@/pages/tpa/Participants';
+import TpaRemittances from '@/pages/tpa/Remittances';
+import TpaTransactions from '@/pages/tpa/Transactions';
+import TpaCompliance from '@/pages/tpa/Compliance';
 import QuoStatus from '@/pages/operations/QuoStatus';
 import LeadScoring from '@/pages/operations/LeadScoring';
 import AutomationActivity from '@/pages/operations/AutomationActivity';
@@ -61,6 +67,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/contacts/:id" element={<ContactDetail />} />
+          <Route path="/sheets" element={<Sheets />} />
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/templates" element={<Templates />} />
@@ -78,6 +85,12 @@ export default function App() {
           <Route path="/marketing/campaigns/:id" element={<MarketingCampaignDetail />} />
           <Route path="/marketing/webinars" element={<MarketingWebinars />} />
           <Route path="/marketing/ads" element={<MarketingAds />} />
+          <Route path="/tpa" element={<Navigate to="/tpa/plans" replace />} />
+          <Route path="/tpa/plans" element={<TpaPlans />} />
+          <Route path="/tpa/participants" element={<TpaParticipants />} />
+          <Route path="/tpa/remittances" element={<TpaRemittances />} />
+          <Route path="/tpa/transactions" element={<TpaTransactions />} />
+          <Route path="/tpa/compliance" element={<TpaCompliance />} />
           <Route
             path="/operations/quo"
             element={

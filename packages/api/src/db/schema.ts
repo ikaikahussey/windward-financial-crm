@@ -419,6 +419,186 @@ export const geoAdCampaigns = pgTable('geo_ad_campaigns', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// ── CRM Spreadsheets ──
+
+export const referralProgramEnum = pgEnum('referral_program', ['DOE', 'CHAMP']);
+
+export const clientRoster = pgTable('client_roster', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  policyNumbers: text('policy_numbers'),
+  notes: text('notes'),
+  contactId: integer('contact_id').references(() => contacts.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const referrals = pgTable('referrals', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 50 }),
+  email: varchar('email', { length: 255 }),
+  source: referralProgramEnum('source').notNull(),
+  referralDate: timestamp('referral_date'),
+  servicingAgentId: integer('servicing_agent_id').references(() => users.id),
+  notes: text('notes'),
+  contactId: integer('contact_id').references(() => contacts.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const payments = pgTable('payments', {
+  id: serial('id').primaryKey(),
+  payeeName: varchar('payee_name', { length: 255 }).notNull(),
+  paymentDate: timestamp('payment_date').notNull(),
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  account: varchar('account', { length: 100 }).notNull().default('Checking'),
+  notes: text('notes'),
+  contactId: integer('contact_id').references(() => contacts.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ── TPA (Third-Party Administrator) Module ──
+
+export const tpaPlanTypeEnum = pgEnum('tpa_plan_type', ['403(b)', '457(b)', 'Other']);
+
+export const tpaParticipantStatusEnum = pgEnum('tpa_participant_status', [
+  'Active', 'Suspended', 'Terminated', 'Retired', 'Deceased',
+]);
+
+export const tpaSraStatusEnum = pgEnum('tpa_sra_status', [
+  'Pending', 'Active', 'Suspended', 'Terminated',
+]);
+
+export const tpaContributionTypeEnum = pgEnum('tpa_contribution_type', [
+  'Employee Pre-Tax', 'Employee Roth', 'Employer Match', 'Employer Non-Elective',
+]);
+
+export const tpaBatchStatusEnum = pgEnum('tpa_batch_status', [
+  'Open', 'Posted', 'Reconciled',
+]);
+
+export const tpaTransactionTypeEnum = pgEnum('tpa_transaction_type', [
+  'Loan', 'Hardship Withdrawal', 'Distribution', 'Contract Exchange',
+  'Rollover In', 'Rollover Out', 'QDRO', 'Other',
+]);
+
+export const tpaTransactionStatusEnum = pgEnum('tpa_transaction_status', [
+  'Submitted', 'In Review', 'Approved', 'Denied', 'Completed', 'Cancelled',
+]);
+
+export const tpaPlans = pgTable('tpa_plans', {
+  id: serial('id').primaryKey(),
+  employerName: varchar('employer_name', { length: 500 }).notNull(),
+  planName: varchar('plan_name', { length: 500 }).notNull(),
+  planType: tpaPlanTypeEnum('plan_type').notNull().default('403(b)'),
+  planNumber: varchar('plan_number', { length: 100 }),
+  effectiveDate: timestamp('effective_date'),
+  payPeriodsPerYear: integer('pay_periods_per_year').notNull().default(24),
+  planDocumentUrl: text('plan_document_url'),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const tpaVendors = pgTable('tpa_vendors', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 500 }).notNull(),
+  contactEmail: varchar('contact_email', { length: 255 }),
+  contactPhone: varchar('contact_phone', { length: 50 }),
+  website: text('website'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Which vendors are approved to receive contributions under which plan.
+export const tpaPlanVendors = pgTable('tpa_plan_vendors', {
+  id: serial('id').primaryKey(),
+  planId: integer('plan_id').references(() => tpaPlans.id).notNull(),
+  vendorId: integer('vendor_id').references(() => tpaVendors.id).notNull(),
+  approvedAt: timestamp('approved_at').defaultNow().notNull(),
+});
+
+export const tpaParticipants = pgTable('tpa_participants', {
+  id: serial('id').primaryKey(),
+  planId: integer('plan_id').references(() => tpaPlans.id).notNull(),
+  contactId: integer('contact_id').references(() => contacts.id),
+  firstName: varchar('first_name', { length: 255 }).notNull(),
+  lastName: varchar('last_name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  employeeId: varchar('employee_id', { length: 100 }),
+  birthDate: timestamp('birth_date'),
+  hireDate: timestamp('hire_date'),
+  status: tpaParticipantStatusEnum('status').notNull().default('Active'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Salary reduction agreements: how much comes out of each paycheck, to whom.
+export const tpaSras = pgTable('tpa_sras', {
+  id: serial('id').primaryKey(),
+  participantId: integer('participant_id').references(() => tpaParticipants.id).notNull(),
+  vendorId: integer('vendor_id').references(() => tpaVendors.id).notNull(),
+  contributionType: tpaContributionTypeEnum('contribution_type').notNull().default('Employee Pre-Tax'),
+  perPayAmount: decimal('per_pay_amount', { precision: 12, scale: 2 }).notNull(),
+  effectiveDate: timestamp('effective_date'),
+  signedDate: timestamp('signed_date'),
+  status: tpaSraStatusEnum('status').notNull().default('Pending'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// A payroll remittance: one batch per plan per pay date, with line items.
+export const tpaRemittanceBatches = pgTable('tpa_remittance_batches', {
+  id: serial('id').primaryKey(),
+  planId: integer('plan_id').references(() => tpaPlans.id).notNull(),
+  payDate: timestamp('pay_date').notNull(),
+  status: tpaBatchStatusEnum('status').notNull().default('Open'),
+  notes: text('notes'),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const tpaContributions = pgTable(
+  'tpa_contributions',
+  {
+    id: serial('id').primaryKey(),
+    batchId: integer('batch_id').references(() => tpaRemittanceBatches.id).notNull(),
+    participantId: integer('participant_id').references(() => tpaParticipants.id).notNull(),
+    vendorId: integer('vendor_id').references(() => tpaVendors.id).notNull(),
+    contributionType: tpaContributionTypeEnum('contribution_type').notNull().default('Employee Pre-Tax'),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    batchIdx: index('tpa_contributions_batch_idx').on(t.batchId),
+    participantIdx: index('tpa_contributions_participant_idx').on(t.participantId),
+  }),
+);
+
+// Participant transaction requests that a TPA reviews and approves/denies.
+export const tpaTransactions = pgTable('tpa_transactions', {
+  id: serial('id').primaryKey(),
+  participantId: integer('participant_id').references(() => tpaParticipants.id).notNull(),
+  vendorId: integer('vendor_id').references(() => tpaVendors.id),
+  txnType: tpaTransactionTypeEnum('txn_type').notNull(),
+  amount: decimal('amount', { precision: 12, scale: 2 }),
+  status: tpaTransactionStatusEnum('status').notNull().default('Submitted'),
+  requestedAt: timestamp('requested_at').defaultNow().notNull(),
+  decidedAt: timestamp('decided_at'),
+  decidedBy: integer('decided_by').references(() => users.id),
+  decisionNotes: text('decision_notes'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // ── Operations / observability tables ──
 
 export const jobRuns = pgTable(

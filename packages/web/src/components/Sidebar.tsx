@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
   Users,
+  ClipboardList,
+  Briefcase,
   Kanban,
   CheckSquare,
   Calendar,
@@ -26,6 +28,7 @@ import {
 const mainLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/contacts', icon: Users, label: 'Contacts' },
+  { to: '/sheets', icon: ClipboardList, label: 'Spreadsheets' },
   { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/appointments', icon: Calendar, label: 'Appointments' },
@@ -43,6 +46,14 @@ const marketingLinks = [
   { to: '/marketing/ads', label: 'Ad Campaigns' },
 ];
 
+const tpaLinks = [
+  { to: '/tpa/plans', label: 'Plans & Vendors' },
+  { to: '/tpa/participants', label: 'Participants' },
+  { to: '/tpa/remittances', label: 'Remittances' },
+  { to: '/tpa/transactions', label: 'Transactions' },
+  { to: '/tpa/compliance', label: 'Compliance' },
+];
+
 const operationsLinks = [
   { to: '/operations/quo', label: 'Quo Status' },
   { to: '/operations/leads', label: 'Lead Scoring' },
@@ -53,10 +64,12 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [marketingOpen, setMarketingOpen] = useState(false);
+  const [tpaOpen, setTpaOpen] = useState(false);
   const [operationsOpen, setOperationsOpen] = useState(false);
   const location = useLocation();
 
   const isMarketingActive = location.pathname.startsWith('/marketing');
+  const isTpaActive = location.pathname.startsWith('/tpa');
   const isOperationsActive = location.pathname.startsWith('/operations');
   const isAdmin = user?.role === 'admin';
 
@@ -115,6 +128,46 @@ export default function Sidebar() {
                 key={link.to}
                 to={link.to}
                 end={link.to === '/marketing'}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'block px-3 py-2 rounded-md text-sm transition-colors',
+                    isActive
+                      ? 'text-white bg-primary-dark/50'
+                      : 'text-primary-light/60 hover:text-white hover:bg-primary-dark/30'
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+
+        {/* TPA Section */}
+        <button
+          onClick={() => setTpaOpen(!tpaOpen)}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full',
+            isTpaActive
+              ? 'bg-primary-light/20 text-white'
+              : 'text-primary-light/70 hover:bg-primary-dark/50 hover:text-white'
+          )}
+        >
+          <Briefcase className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">TPA</span>
+          {tpaOpen || isTpaActive ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+        </button>
+        {(tpaOpen || isTpaActive) && (
+          <div className="ml-7 space-y-0.5">
+            {tpaLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
                   cn(
@@ -240,7 +293,7 @@ export default function Sidebar() {
       {/* Mobile toggle */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-primary text-white shadow-lg"
+        className="lg:hidden print:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-primary text-white shadow-lg"
       >
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>

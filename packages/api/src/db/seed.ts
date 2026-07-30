@@ -74,7 +74,7 @@ async function seed() {
         name: 'Tiff',
         email: 'tiff@windwardfinancial.net',
         passwordHash: hash('windward2024'),
-        role: 'admin',
+        role: 'agent',
       },
       {
         name: 'May',
@@ -86,7 +86,7 @@ async function seed() {
         name: 'Brittany',
         email: 'brittany@windwardfinancial.net',
         passwordHash: hash('windward2024'),
-        role: 'admin',
+        role: 'agent',
       },
       {
         name: 'Ikaika',
