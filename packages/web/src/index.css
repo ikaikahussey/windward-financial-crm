@@ -37,6 +37,29 @@
   }
 }
 
+/* Print: hide chrome, let the sheet flow across pages */
+@media print {
+  aside,
+  .print\:hidden {
+    display: none !important;
+  }
+  #root > div,
+  #root .flex.h-screen {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  main {
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  body {
+    background: white;
+  }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

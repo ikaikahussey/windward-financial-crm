@@ -290,6 +290,198 @@ export interface Subscriber {
   unsubscribed_at?: string;
 }
 
+export interface ClientRosterRow {
+  id: number;
+  name: string;
+  policy_numbers?: string | null;
+  notes?: string | null;
+  contact_id?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Referral {
+  id: number;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  source: 'DOE' | 'CHAMP';
+  referral_date?: string | null;
+  servicing_agent_id?: number | null;
+  servicing_agent_name?: string | null;
+  notes?: string | null;
+  contact_id?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Payment {
+  id: number;
+  payee_name: string;
+  payment_date: string;
+  amount: string;
+  account: string;
+  notes?: string | null;
+  contact_id?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── TPA module ──
+
+export type TpaPlanType = '403(b)' | '457(b)' | 'Other';
+export type TpaParticipantStatus = 'Active' | 'Suspended' | 'Terminated' | 'Retired' | 'Deceased';
+export type TpaSraStatus = 'Pending' | 'Active' | 'Suspended' | 'Terminated';
+export type TpaContributionType =
+  | 'Employee Pre-Tax'
+  | 'Employee Roth'
+  | 'Employer Match'
+  | 'Employer Non-Elective';
+export type TpaBatchStatus = 'Open' | 'Posted' | 'Reconciled';
+export type TpaTransactionType =
+  | 'Loan'
+  | 'Hardship Withdrawal'
+  | 'Distribution'
+  | 'Contract Exchange'
+  | 'Rollover In'
+  | 'Rollover Out'
+  | 'QDRO'
+  | 'Other';
+export type TpaTransactionStatus =
+  | 'Submitted'
+  | 'In Review'
+  | 'Approved'
+  | 'Denied'
+  | 'Completed'
+  | 'Cancelled';
+
+export interface TpaVendor {
+  id: number;
+  name: string;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  website?: string | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface TpaPlan {
+  id: number;
+  employer_name: string;
+  plan_name: string;
+  plan_type: TpaPlanType;
+  plan_number?: string | null;
+  effective_date?: string | null;
+  pay_periods_per_year: number;
+  plan_document_url?: string | null;
+  is_active: boolean;
+  notes?: string | null;
+  participant_count?: number;
+  vendors?: { id: number; name: string }[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TpaSra {
+  id: number;
+  participant_id: number;
+  vendor_id: number;
+  vendor_name?: string | null;
+  contribution_type: TpaContributionType;
+  per_pay_amount: string;
+  effective_date?: string | null;
+  signed_date?: string | null;
+  status: TpaSraStatus;
+  notes?: string | null;
+}
+
+export interface TpaParticipant {
+  id: number;
+  plan_id: number;
+  plan_name?: string | null;
+  employer_name?: string | null;
+  contact_id?: number | null;
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  phone?: string | null;
+  employee_id?: string | null;
+  birth_date?: string | null;
+  hire_date?: string | null;
+  status: TpaParticipantStatus;
+  notes?: string | null;
+  sras?: TpaSra[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TpaBatch {
+  id: number;
+  plan_id: number;
+  plan_name?: string | null;
+  employer_name?: string | null;
+  pay_date: string;
+  status: TpaBatchStatus;
+  notes?: string | null;
+  total?: string;
+  line_count?: number;
+  created_at: string;
+}
+
+export interface TpaContribution {
+  id: number;
+  batch_id: number;
+  participant_id: number;
+  participant_first_name?: string | null;
+  participant_last_name?: string | null;
+  vendor_id: number;
+  vendor_name?: string | null;
+  contribution_type: TpaContributionType;
+  amount: string;
+}
+
+export interface TpaBatchDetail extends TpaBatch {
+  lines: TpaContribution[];
+}
+
+export interface TpaTransaction {
+  id: number;
+  participant_id: number;
+  participant_first_name?: string | null;
+  participant_last_name?: string | null;
+  vendor_id?: number | null;
+  vendor_name?: string | null;
+  txn_type: TpaTransactionType;
+  amount?: string | null;
+  status: TpaTransactionStatus;
+  requested_at: string;
+  decided_at?: string | null;
+  decided_by_name?: string | null;
+  decision_notes?: string | null;
+  notes?: string | null;
+}
+
+export interface TpaComplianceRow {
+  participant_id: number;
+  first_name: string;
+  last_name: string;
+  status: TpaParticipantStatus;
+  employer_name: string;
+  plan_name: string;
+  catch_up_eligible: boolean;
+  employee_deferrals: string;
+  total_contributions: string;
+  deferral_limit: number;
+  remaining: string;
+  over_limit: boolean;
+}
+
+export interface TpaComplianceReport {
+  year: number;
+  limits: { deferral: number; catch_up: number; total: number };
+  participants: TpaComplianceRow[];
+}
+
 export interface DashboardStats {
   total_contacts: number;
   by_stage: Record<PipelineStage, number>;
