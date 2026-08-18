@@ -107,15 +107,18 @@ jobs:
           echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Post run-start comment
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           set -e
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_SUBJECT=$(printf '%s' "${COMMIT_MESSAGE:-}" | head -n1)
           {
             echo "## ⏳ Run started"
             echo ""
             echo "- **Run:** [${{ github.run_id }}]($RUN_URL)"
             echo "- **Trigger:** ${{ github.event_name }}${{ github.event.inputs.action && format(' / {0} / {1}', github.event.inputs.action, github.event.inputs.service) || '' }}"
-            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) — ${{ github.event.head_commit.message && github.event.head_c[...]
+            echo "- **Commit:** [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) — ${COMMIT_SUBJECT}"
             echo "- **Actor:** @${{ github.actor }}"
             echo ""
             echo "_Final status will be appended to this issue when the run finishes._"
