@@ -444,7 +444,7 @@ When a contact's pipeline stage changes, the automation engine (`services/automa
 
 | Stage | Automated Actions |
 |-------|-------------------|
-| **→ New Lead** | Enroll in 6-email nurture drip sequence, send welcome SMS, score lead |
+| **→ New Lead** | Assign rep (round-robin), enroll in 6-email nurture drip sequence, send instant welcome text, create Urgent call task for the rep |
 | **→ Consultation Scheduled** | Send confirmation email + SMS, schedule reminders, create prep task |
 | **→ Consultation Completed** | Generate AI product recommendation, create review task |
 | **→ Proposal Sent** | Queue follow-ups at 3, 5, and 10 days; auto-expire to Lost after 14 days |
@@ -486,6 +486,28 @@ After a consultation is marked complete, Claude generates a draft recommendation
 The agent reviews and adjusts before sending the proposal.
 
 ---
+
+## Instant Welcome Text
+
+Every new contact created by a public form (`/api/public/{enroll,schedule,contact,calculator-lead,events/:id/register}`) with a valid US mobile number gets a text within seconds (`services/welcome-text.ts`).
+
+Everything about it is set in the Admin CRM under **Welcome Text** (admin only) — no rep is hard-coded:
+
+- **Reps** — check the users who receive new registrations. Leads rotate round-robin across everyone checked (`services/rep-assignment.ts`). Edit each rep's title and phone and upload a photo there; email is the user's login email (Users page).
+- **Message** — editable template with variables: `{{first_name}}`, `{{rep_name}}`, `{{rep_first_name}}`, `{{rep_title}}`, `{{rep_phone}}`, `{{rep_email}}`, `{{rep_photo_link}}`. Live preview, character/segment count, and a "Send test" button.
+- **On/off switch.** `WELCOME_SMS_ENABLED=false` on the server is a hard override.
+
+Default message:
+
+> Aloha {{first_name}}, mahalo for registering with Windward Financial. Your rep is {{rep_name}}. {{rep_first_name}} will call you right away. Phone: {{rep_phone}} | Email: {{rep_email}} | Photo: {{rep_photo_link}} Reply STOP to opt out.
+
+Other behavior:
+
+- **Photo** — the Quo API is SMS-only (no MMS), so `{{rep_photo_link}}` is a link to the rep's card, served by the API at `API_PUBLIC_URL/r/<slug>` (`routes/rep-card.ts`). The card shows photo, call/text/email buttons, and uses the photo as its link-preview image. Photos are stored on the user row (600 KB max).
+- **Sending line** — the rep's Quo number (Settings → Quo number mapping), else `QUO_DEFAULT_FROM_NUMBER_ID`, else the first synced number.
+- **Call promise** — the rep gets an Urgent "Call new lead now" task and an alert text to their phone.
+- Sent once per contact (new contacts only). Outcome is logged on the contact timeline: `Welcome text sent`, `Welcome text failed`, or `Welcome text not sent` with the reason.
+- API: `GET/PUT /api/welcome-text`, `POST /api/welcome-text/preview`, `PATCH /api/welcome-text/reps/:id`, `POST /api/welcome-text/test`.
 
 ## Quo (OpenPhone) Integration
 

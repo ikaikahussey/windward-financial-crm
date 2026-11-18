@@ -29,6 +29,8 @@ import clientRosterRoutes from './routes/client-roster';
 import referralsRoutes from './routes/referrals';
 import paymentsRoutes from './routes/payments';
 import tpaRoutes from './routes/tpa';
+import welcomeTextRoutes from './routes/welcome-text';
+import repCardRoutes from './routes/rep-card';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -86,6 +88,8 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/public', publicFormsRoutes);
 app.use('/api/public', marketingPublicRoutes);
 app.use('/api/webhooks/quo', webhooksQuoRoutes);
+app.use('/r', repCardRoutes); // public rep photo cards linked from the welcome text
+app.use('/api/public/r', repCardRoutes); // same card under /api for same-origin proxies
 
 // Auth routes
 app.use('/api/auth', authRoutes);
@@ -106,6 +110,7 @@ app.use('/api/client-roster', requireAuth, clientRosterRoutes);
 app.use('/api/referrals', requireAuth, referralsRoutes);
 app.use('/api/payments', requireAuth, requireAdmin, paymentsRoutes);
 app.use('/api/tpa', requireAuth, tpaRoutes);
+app.use('/api/welcome-text', requireAuth, requireAdmin, welcomeTextRoutes);
 app.use('/api/admin/quo', requireAuth, requireAdmin, adminQuoRoutes);
 app.use('/api/admin/leads', requireAuth, requireAdmin, adminLeadsRoutes);
 app.use('/api/admin/jobs', requireAuth, requireAdmin, adminJobsRoutes);
