@@ -228,7 +228,8 @@ class QuoService {
     content: string
   ): Promise<QuoMessage> {
     const res = await this.request<{ data: QuoMessage }>('POST', '/messages', {
-      phoneNumberId: fromPhoneNumberId,
+      // `phoneNumberId` is deprecated by Quo in favor of `from`.
+      from: fromPhoneNumberId,
       to: [to],
       content,
     });

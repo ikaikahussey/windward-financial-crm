@@ -94,8 +94,24 @@ export const users = pgTable('users', {
   name: varchar('name', { length: 255 }).notNull(),
   role: userRoleEnum('role').notNull().default('agent'),
   phone: varchar('phone', { length: 50 }),
+  // Rep profile fields used by the instant welcome text (services/welcome-text.ts)
+  title: varchar('title', { length: 255 }),
+  profileSlug: varchar('profile_slug', { length: 255 }),
+  isLeadRep: boolean('is_lead_rep').notNull().default(false),
+  lastLeadAssignedAt: timestamp('last_lead_assigned_at'),
+  // Base64 photo shown on the rep card the welcome text links to.
+  photoData: text('photo_data'),
+  photoMime: varchar('photo_mime', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Key/value settings editable in the Admin CRM.
+export const appSettings = pgTable('app_settings', {
+  key: varchar('key', { length: 100 }).primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedBy: integer('updated_by').references(() => users.id, { onDelete: 'set null' }),
 });
 
 export const contacts = pgTable('contacts', {

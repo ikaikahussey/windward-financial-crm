@@ -18,6 +18,9 @@ function shape(u: typeof users.$inferSelect) {
     email: u.email,
     role: u.role,
     phone: u.phone,
+    title: u.title,
+    profileSlug: u.profileSlug,
+    isLeadRep: u.isLeadRep,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   };
@@ -37,7 +40,7 @@ router.get('/', async (_req: Request, res: Response) => {
 // POST / — create user
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, email, role, phone, password } = req.body ?? {};
+    const { name, email, role, phone, password, title, profileSlug, isLeadRep } = req.body ?? {};
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'name, email, and password are required' });
     }
@@ -58,7 +61,16 @@ router.post('/', async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const [u] = await db
       .insert(users)
-      .values({ name, email, role: userRole, phone: phone ?? null, passwordHash })
+      .values({
+        name,
+        email,
+        role: userRole,
+        phone: phone ?? null,
+        title: title || null,
+        profileSlug: profileSlug || null,
+        isLeadRep: isLeadRep === true,
+        passwordHash,
+      })
       .returning();
     return res.status(201).json({ user: shape(u) });
   } catch (error) {
@@ -72,7 +84,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id)) return res.status(400).json({ error: 'invalid id' });
-    const { name, email, role, phone, password } = req.body ?? {};
+    const { name, email, role, phone, password, title, profileSlug, isLeadRep } = req.body ?? {};
 
     const update: Record<string, unknown> = { updatedAt: new Date() };
     if (typeof name === 'string') update.name = name;
@@ -82,6 +94,9 @@ router.patch('/:id', async (req: Request, res: Response) => {
       update.role = role;
     }
     if (phone !== undefined) update.phone = phone;
+    if (title !== undefined) update.title = title || null;
+    if (profileSlug !== undefined) update.profileSlug = profileSlug || null;
+    if (typeof isLeadRep === 'boolean') update.isLeadRep = isLeadRep;
     if (password) {
       if (typeof password !== 'string' || password.length < 8) {
         return res.status(400).json({ error: 'password must be at least 8 characters' });

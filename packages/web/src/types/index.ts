@@ -4,6 +4,9 @@ export interface User {
   name: string;
   role: 'admin' | 'agent' | 'viewer';
   phone?: string;
+  title?: string | null;
+  profileSlug?: string | null;
+  isLeadRep?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;

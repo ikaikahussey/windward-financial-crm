@@ -167,15 +167,22 @@ async function handleNewLead(
   // Enroll in drip sequence
   await enrollInDripSequence(contactId);
 
-  // Create follow-up task for the agent
+  // Call task for the assigned rep. The welcome text tells the lead they
+  // will be called right away, so this is Urgent and due now.
+  const [contact] = await db
+    .select({ assignedAgentId: contacts.assignedAgentId })
+    .from(contacts)
+    .where(eq(contacts.id, contactId))
+    .limit(1);
+
   await createTask({
     contactId,
-    assignedTo: userId,
+    assignedTo: contact?.assignedAgentId ?? userId,
     createdBy: userId,
-    title: 'Initial outreach to new lead',
-    description: 'Make first contact with the new lead within 24 hours.',
-    dueInDays: 1,
-    priority: 'High',
+    title: 'Call new lead now',
+    description:
+      'New registration. The lead was texted that their rep will call right away.',
+    priority: 'Urgent',
     taskType: 'Call',
   });
 }
