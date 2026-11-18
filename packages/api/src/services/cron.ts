@@ -14,6 +14,7 @@ import { quoService } from './quo';
 import { rescoreAllLeads } from './lead-scoring';
 import { processCampaignQueue } from './campaign-engine';
 import { runJob, type JobContext } from './job-runner';
+import { sendAppointmentReminders, sendBookingNudges } from './booking';
 
 // HST = UTC-10, no daylight saving
 const TZ_HST = 'Pacific/Honolulu';
@@ -257,6 +258,17 @@ export function startCronJobs(): void {
       // processEmailQueue currently doesn't return counts; treat each invocation
       // as a single processed unit when no counts are surfaced.
       ctx.incrementProcessed(typeof result === 'number' ? result : 1);
+    }),
+  );
+
+  // Every 5 min: consultation reminders and booking-link nudges
+  cron.schedule(
+    '*/5 * * * *',
+    scheduledJob('booking', async (ctx) => {
+      const reminders = await sendAppointmentReminders();
+      const nudges = await sendBookingNudges();
+      ctx.incrementProcessed(reminders + nudges);
+      if (reminders || nudges) ctx.appendLog(`reminders=${reminders} nudges=${nudges}`);
     }),
   );
 

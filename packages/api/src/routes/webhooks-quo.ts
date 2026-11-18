@@ -7,7 +7,10 @@ import {
   contacts,
   webhookEvents,
 } from '../db/schema';
-import { eq, ilike } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+
+import { advanceStage } from '../services/stage-events';
+import { handleInboundSms } from '../services/inbound-sms';
 
 const router = Router();
 
@@ -21,7 +24,8 @@ async function findContactByPhone(phoneNumber: string) {
   const [contact] = await db
     .select({ id: contacts.id })
     .from(contacts)
-    .where(ilike(contacts.phone, pattern))
+    // Phones are stored as typed ("(808) 555-1234"), so compare digits only.
+    .where(sql`regexp_replace(coalesce(${contacts.phone}, ''), '\\D', '', 'g') like ${pattern}`)
     .limit(1);
   return contact ?? null;
 }
@@ -141,6 +145,12 @@ router.post(
           });
         }
       }
+      // A real conversation (30s+) with a new lead counts as contact made.
+      const seconds = Number(data.durationSeconds ?? data.duration ?? 0);
+      if (contact?.id && seconds >= 30) {
+        await db.update(contacts).set({ lastContactedAt: new Date() }).where(eq(contacts.id, contact.id));
+        await advanceStage(contact.id, 'Contacted', ['New Lead']);
+      }
       return { matchedContactId: contact?.id ?? null, body: { received: true } };
     }
 
@@ -197,6 +207,11 @@ router.post(
           subject: 'SMS received',
           body: data.body || data.content || '',
         });
+      }
+
+      // STOP/START keywords, stop the nurture drip, tell the rep.
+      if (contact?.id) {
+        await handleInboundSms(contact.id, data.body || data.content || '');
       }
 
       return {

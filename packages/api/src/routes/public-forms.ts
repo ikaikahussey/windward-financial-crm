@@ -8,6 +8,9 @@ import {
 } from '../db/schema';
 import { eq, and, gte, asc, sql } from 'drizzle-orm';
 import { createOrUpdateLead } from '../services/lead-capture';
+import { contacts } from '../db/schema';
+import { bookingLink } from '../services/links';
+import { sendBookingInvite } from '../services/booking';
 
 const router = Router();
 
@@ -245,27 +248,23 @@ router.post('/schedule', async (req: Request, res: Response) => {
       notes: scheduleNotes,
     });
 
-    if (preferredDate) {
-      const timeMap: Record<string, string> = {
-        morning: '09:00:00',
-        afternoon: '13:00:00',
-        evening: '17:00:00',
-      };
-      const timeStr = timeMap[(preferredTime || '').toLowerCase()] || preferredTime || '09:00:00';
-      const startTime = new Date(`${preferredDate}T${timeStr}`);
-      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+    // The requested time is kept in the notes above. The client picks a real
+    // open time on their booking page, so nothing is booked blind.
+    const [row] = await db
+      .select({ token: contacts.publicToken })
+      .from(contacts)
+      .where(eq(contacts.id, lead.contactId))
+      .limit(1);
+    const bookingUrl = bookingLink(row?.token) || null;
+    void sendBookingInvite(lead.contactId, { force: true }).catch((err) =>
+      console.error('Booking invite error:', err),
+    );
 
-      await db.insert(appointments).values({
-        contactId: lead.contactId,
-        agentId: 1,
-        startTime,
-        endTime,
-        status: 'Scheduled',
-        notes: `Requested via website. ${notes || ''}`.trim(),
-      });
-    }
-
-    return res.status(201).json({ message: 'Appointment request received!', contactId: lead.contactId });
+    return res.status(201).json({
+      message: 'Appointment request received!',
+      contactId: lead.contactId,
+      bookingUrl,
+    });
   } catch (error) {
     console.error('Schedule error:', error);
     return res.status(500).json({ error: 'Internal server error' });

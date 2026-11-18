@@ -245,6 +245,7 @@ export default function Sidebar() {
         </NavLink>
 
         {user?.role === 'admin' && (
+          <>
           <NavLink
             to="/welcome-text"
             onClick={() => setMobileOpen(false)}
@@ -260,6 +261,22 @@ export default function Sidebar() {
             <MessageSquare className="h-4 w-4 shrink-0" />
             Welcome Text
           </NavLink>
+          <NavLink
+            to="/booking"
+            onClick={() => setMobileOpen(false)}
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-primary-light/20 text-white'
+                  : 'text-primary-light/70 hover:bg-primary-dark/50 hover:text-white'
+              )
+            }
+          >
+            <CalendarDays className="h-4 w-4 shrink-0" />
+            Booking
+          </NavLink>
+          </>
         )}
 
         <NavLink

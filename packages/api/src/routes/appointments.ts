@@ -3,6 +3,9 @@ import { db } from '../db';
 import { appointments } from '../db/schema';
 import { eq, and, gte, lte, desc, SQL } from 'drizzle-orm';
 
+import { advanceStage, BEFORE_CONSULTATION } from '../services/stage-events';
+import { sendBookingInvite } from '../services/booking';
+
 const router = Router();
 
 // GET / — list appointments with filters
@@ -77,7 +80,13 @@ router.post('/', async (req: Request, res: Response) => {
       location,
       status: status || 'Scheduled',
       notes,
+      source: 'staff',
     }).returning();
+
+    // A consultation on the calendar means the contact is scheduled.
+    if (appointment.status === 'Scheduled') {
+      await advanceStage(appointment.contactId, 'Consultation Scheduled', BEFORE_CONSULTATION);
+    }
 
     return res.status(201).json(appointment);
   } catch (error) {
@@ -97,6 +106,8 @@ router.patch('/:id', async (req: Request, res: Response) => {
     if (updateData.startTime) updateData.startTime = new Date(updateData.startTime);
     if (updateData.endTime) updateData.endTime = new Date(updateData.endTime);
 
+    const [before] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
+
     const [updated] = await db
       .update(appointments)
       .set(updateData)
@@ -105,6 +116,15 @@ router.patch('/:id', async (req: Request, res: Response) => {
 
     if (!updated) {
       return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    // Marking the outcome moves the pipeline and, for a no-show, texts a rebooking link.
+    if (before && before.status !== updated.status) {
+      if (updated.status === 'Completed') {
+        await advanceStage(updated.contactId, 'Consultation Completed', [...BEFORE_CONSULTATION, 'Consultation Scheduled']);
+      } else if (updated.status === 'No Show') {
+        await sendBookingInvite(updated.contactId, { force: true, kind: 'noShow' });
+      }
     }
 
     return res.json(updated);

@@ -138,6 +138,8 @@ describe('template', () => {
     rep_phone: '(808) 341-7589',
     rep_email: 'kealakai@windwardfinancial.net',
     rep_photo_link: 'https://api.example.test/r/kealakai-hussey',
+    booking_link: 'https://api.example.test/b/tok',
+    intake_link: 'https://api.example.test/i/tok',
   };
 
   it('default template names the rep, gives phone, email and photo link, and promises a call', () => {
