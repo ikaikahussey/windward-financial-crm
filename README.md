@@ -509,6 +509,35 @@ Other behavior:
 - Sent once per contact (new contacts only). Outcome is logged on the contact timeline: `Welcome text sent`, `Welcome text failed`, or `Welcome text not sent` with the reason.
 - API: `GET/PUT /api/welcome-text`, `POST /api/welcome-text/preview`, `PATCH /api/welcome-text/reps/:id`, `POST /api/welcome-text/test`.
 
+## Self-Serve Booking, Intake, and Event-Driven Stages
+
+Each contact has a private token and two pages served by the API: a booking page (`/b/<token>`) and an intake form (`/i/<token>`). Settings are in the Admin CRM under **Booking** (admin only).
+
+**Booking** (`services/booking.ts`)
+- Open times = working hours, minus the rep's busy times, minus consultations already in the CRM.
+- Busy times come from a read-only ICS link per rep (`services/calendar-feed.ts`). Proton Calendar has no API; create the link in Proton: Settings → Calendars → Share with anyone. Only times are read. If a link cannot be read, booking still works from CRM data and the Booking page's Test button reports the error.
+- Booking creates the appointment, moves the contact to Consultation Scheduled, texts a confirmation, texts the rep, and emails the rep a calendar invite (`.ics`). Clients reschedule or cancel from the same link.
+- Reminders by text 24 hours and 1 hour before. Marking an appointment No Show texts a rebooking link.
+- New leads who have not booked or been reached get the booking link by text once, after a configurable delay, 8am–8pm only. Hot leads get it at the daily scoring run. (The old "auto-book" only relabeled the stage; it is removed.)
+- The website appointment form no longer books an unchecked time; it texts the booking link and returns `bookingUrl`.
+- Welcome text template gains `{{booking_link}}` and `{{intake_link}}`.
+
+**Intake** (`services/intake.ts`): employer, years of service, ERS plan, life insurance, optional salary and 403(b) balance, goals. Saved to the contact; the lead is re-scored immediately.
+
+**Stages move on events** (`services/stage-events.ts`), forward only:
+
+| Event | Stage |
+|---|---|
+| Client books, or staff adds an appointment | Consultation Scheduled |
+| Call of 30+ seconds, or a text reply, from a New Lead | Contacted |
+| Appointment marked Completed | Consultation Completed |
+| Policy added with status Applied | Application Submitted |
+| Policy status Issued or Active | Policy Issued |
+
+**Inbound texts** (`services/inbound-sms.ts`): STOP-type replies set `contacts.sms_opt_out` (every automated text checks it; START clears it). Any other reply stops the new-lead email drip, creates a "Reply to text" task, and texts the rep. Inbound numbers now match contacts regardless of how the phone was typed.
+
+**CORS** (`middleware/cors-options.ts`): the API's own origin is allowed, since it serves the booking and intake pages.
+
 ## Quo (OpenPhone) Integration
 
 The CRM integrates with [Quo](https://www.openphone.com/) for business phone and SMS:

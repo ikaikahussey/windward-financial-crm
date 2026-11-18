@@ -3,6 +3,17 @@ import { db } from '../db';
 import { policies, activities } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 
+import { advanceStage, BEFORE_APPLICATION } from '../services/stage-events';
+
+/** A policy record moves the pipeline: Applied = application in, Issued/Active = policy issued. */
+async function stageForPolicy(contactId: number, status: string | null | undefined) {
+  if (status === 'Applied') {
+    await advanceStage(contactId, 'Application Submitted', BEFORE_APPLICATION);
+  } else if (status === 'Issued' || status === 'Active') {
+    await advanceStage(contactId, 'Policy Issued', [...BEFORE_APPLICATION, 'Application Submitted']);
+  }
+}
+
 const router = Router();
 
 // GET / — list policies (optionally by contact_id)
@@ -75,6 +86,8 @@ router.post('/', async (req: Request, res: Response) => {
       body: `${productType}${carrier ? ` with ${carrier}` : ''}${policyNumber ? ` (${policyNumber})` : ''}`,
     });
 
+    await stageForPolicy(contactId, policy.status);
+
     return res.status(201).json(policy);
   } catch (error) {
     console.error('Create policy error:', error);
@@ -102,6 +115,8 @@ router.patch('/:id', async (req: Request, res: Response) => {
     if (!updated) {
       return res.status(404).json({ error: 'Policy not found' });
     }
+
+    if (req.body?.status) await stageForPolicy(updated.contactId, updated.status);
 
     return res.json(updated);
   } catch (error) {

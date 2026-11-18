@@ -2,6 +2,7 @@ import { db } from '../db';
 import { contacts, leadScoreHistory, pipelineEntries } from '../db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import type { JobContext } from './job-runner';
+import { sendBookingInvite } from './booking';
 
 /**
  * Score a contact 0–100 based on their profile data, returning both the
@@ -223,14 +224,15 @@ export async function rescoreAllLeads(
           .orderBy(desc(pipelineEntries.movedAt))
           .limit(1);
 
+        // A hot lead who has not booked gets their booking link by text (once).
+        // The stage changes only when they actually pick a time.
         const earlyStages = new Set(['New Lead', 'Contacted']);
         if (latestStage && earlyStages.has(latestStage.pipelineStage)) {
-          await db.insert(pipelineEntries).values({
-            contactId: c.id,
-            pipelineStage: 'Consultation Scheduled',
-          });
-          autoBooked++;
-          ctx?.appendLog(`auto-booked contact ${c.id} (score=${score})`);
+          const invite = await sendBookingInvite(c.id);
+          if (invite.sent) {
+            autoBooked++;
+            ctx?.appendLog(`booking link sent to hot lead ${c.id} (score=${score})`);
+          }
         }
       }
 

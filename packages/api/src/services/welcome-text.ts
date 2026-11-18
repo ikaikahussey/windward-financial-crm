@@ -1,9 +1,11 @@
 import { db } from '../db';
-import { activities, appSettings, contacts, quoPhoneNumbers, smsMessages } from '../db/schema';
+import { activities, appSettings, contacts, smsMessages } from '../db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { quoService } from './quo';
 import { assignRep, type Rep } from './rep-assignment';
 import { formatPhone, toE164 } from './phone';
+import { apiBaseUrl, bookingLink, intakeLink, repCardLink } from './links';
+import { pickFromNumber } from './sms';
 
 /**
  * Instant welcome text for new registrations.
@@ -24,6 +26,8 @@ export const TEMPLATE_VARIABLES = [
   { name: 'rep_phone', description: "Rep's phone number" },
   { name: 'rep_email', description: "Rep's email" },
   { name: 'rep_photo_link', description: "Link to the rep's photo card" },
+  { name: 'booking_link', description: "Link where the client picks a call time" },
+  { name: 'intake_link', description: "Link to the client's pre-call questions" },
 ] as const;
 
 export type TemplateVars = Record<(typeof TEMPLATE_VARIABLES)[number]['name'], string>;
@@ -95,9 +99,6 @@ export function smsSegments(body: string): number {
   return body.length <= single ? 1 : Math.ceil(body.length / multi);
 }
 
-const apiBaseUrl = () =>
-  (process.env.API_PUBLIC_URL || process.env.QUO_WEBHOOK_BASE_URL || '').replace(/\/+$/, '');
-
 export function slugify(name: string): string {
   return name
     .normalize('NFKD')
@@ -109,11 +110,15 @@ export function slugify(name: string): string {
 
 /** Public URL of the rep's photo card, or '' when it cannot be built. */
 export function repCardUrl(rep: Pick<Rep, 'profileSlug'>): string {
-  const base = apiBaseUrl();
-  return base && rep.profileSlug ? `${base}/r/${rep.profileSlug}` : '';
+  return repCardLink(rep.profileSlug);
 }
 
-export function templateVarsFor(firstName: string, rep: Rep, quoLine?: string | null): TemplateVars {
+export function templateVarsFor(
+  firstName: string,
+  rep: Rep,
+  quoLine?: string | null,
+  contactToken: string | null = 'preview',
+): TemplateVars {
   return {
     first_name: firstName.trim(),
     rep_name: rep.name,
@@ -122,6 +127,8 @@ export function templateVarsFor(firstName: string, rep: Rep, quoLine?: string | 
     rep_phone: formatPhone(rep.phone) || formatPhone(quoLine) || '',
     rep_email: rep.email,
     rep_photo_link: repCardUrl(rep),
+    booking_link: bookingLink(contactToken),
+    intake_link: intakeLink(contactToken),
   };
 }
 
@@ -142,21 +149,11 @@ export type WelcomeTextResult =
   | { sent: true; messageId: number; body: string }
   | { sent: false; reason: string };
 
-/** Pick the Quo line to send from: the rep's own line, else the default line. */
-export async function pickFromNumber(repId: number) {
-  const numbers = await db.select().from(quoPhoneNumbers).orderBy(quoPhoneNumbers.id);
-  if (numbers.length === 0) return null;
-  const defaultId = process.env.QUO_DEFAULT_FROM_NUMBER_ID;
-  return (
-    numbers.find((n) => n.assignedUserId === repId) ??
-    numbers.find((n) => defaultId && n.quoPhoneNumberId === defaultId) ??
-    numbers[0]
-  );
-}
-
 async function note(contactId: number, subject: string, body?: string) {
   await db.insert(activities).values({ contactId, activityType: 'Note', subject, body: body ?? null });
 }
+
+export { pickFromNumber };
 
 export async function sendWelcomeText(contactId: number): Promise<WelcomeTextResult> {
   // Env var is a hard kill switch; the Admin CRM switch is the normal control.
@@ -167,6 +164,7 @@ export async function sendWelcomeText(contactId: number): Promise<WelcomeTextRes
   const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId)).limit(1);
   if (!contact) return { sent: false, reason: 'contact not found' };
 
+  if (contact.smsOptOut) return { sent: false, reason: 'opted out' };
   const to = toE164(contact.phone);
   if (!to) return { sent: false, reason: 'no valid mobile number' };
 
@@ -189,7 +187,7 @@ export async function sendWelcomeText(contactId: number): Promise<WelcomeTextRes
 
   const body = renderTemplate(
     settings.template,
-    templateVarsFor(contact.firstName, rep, from.assignedUserId === rep.id ? from.phoneNumber : null),
+    templateVarsFor(contact.firstName, rep, from.assignedUserId === rep.id ? from.phoneNumber : null, contact.publicToken),
   );
 
   try {

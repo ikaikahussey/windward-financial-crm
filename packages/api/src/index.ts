@@ -31,6 +31,10 @@ import paymentsRoutes from './routes/payments';
 import tpaRoutes from './routes/tpa';
 import welcomeTextRoutes from './routes/welcome-text';
 import repCardRoutes from './routes/rep-card';
+import { corsDelegate } from './middleware/cors-options';
+import clientSelfServeRoutes from './routes/client-self-serve';
+import { bookingPageRouter, intakePageRouter } from './routes/client-pages';
+import bookingSettingsRoutes from './routes/booking-settings';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001');
@@ -38,27 +42,8 @@ const PORT = parseInt(process.env.PORT || '3001');
 // Trust Railway's reverse proxy (needed for secure cookies)
 app.set('trust proxy', 1);
 
-// CORS — PUBLIC_URL and ADMIN_URL may each be a comma-separated list of
-// allowed origins (e.g. both the Railway-assigned URL and the custom domain).
-const splitOrigins = (value: string | undefined): string[] =>
-  (value || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-const allowedOrigins = [
-  ...splitOrigins(process.env.PUBLIC_URL),
-  ...splitOrigins(process.env.ADMIN_URL),
-];
-
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-}));
+// CORS — see middleware/cors-options.ts
+app.use(cors(corsDelegate));
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -90,6 +75,9 @@ app.use('/api/public', marketingPublicRoutes);
 app.use('/api/webhooks/quo', webhooksQuoRoutes);
 app.use('/r', repCardRoutes); // public rep photo cards linked from the welcome text
 app.use('/api/public/r', repCardRoutes); // same card under /api for same-origin proxies
+app.use('/api/public', clientSelfServeRoutes); // booking + intake JSON, keyed by contact token
+app.use('/b', bookingPageRouter); // client booking page
+app.use('/i', intakePageRouter); // client intake form
 
 // Auth routes
 app.use('/api/auth', authRoutes);
@@ -111,6 +99,7 @@ app.use('/api/referrals', requireAuth, referralsRoutes);
 app.use('/api/payments', requireAuth, requireAdmin, paymentsRoutes);
 app.use('/api/tpa', requireAuth, tpaRoutes);
 app.use('/api/welcome-text', requireAuth, requireAdmin, welcomeTextRoutes);
+app.use('/api/booking-settings', requireAuth, requireAdmin, bookingSettingsRoutes);
 app.use('/api/admin/quo', requireAuth, requireAdmin, adminQuoRoutes);
 app.use('/api/admin/leads', requireAuth, requireAdmin, adminLeadsRoutes);
 app.use('/api/admin/jobs', requireAuth, requireAdmin, adminJobsRoutes);

@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import {
   pgTable,
   serial,
@@ -102,6 +103,8 @@ export const users = pgTable('users', {
   // Base64 photo shown on the rep card the welcome text links to.
   photoData: text('photo_data'),
   photoMime: varchar('photo_mime', { length: 50 }),
+  // Read-only ICS link to the rep's calendar (Proton: Share via link). Busy times block booking.
+  calendarFeedUrl: text('calendar_feed_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -140,6 +143,15 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   lastContactedAt: timestamp('last_contacted_at'),
+  // Unguessable token for the contact's own booking (/b/:token) and intake (/i/:token) pages.
+  publicToken: varchar('public_token', { length: 64 })
+    .unique()
+    .$defaultFn(() => randomBytes(24).toString('base64url')),
+  smsOptOut: boolean('sms_opt_out').notNull().default(false),
+  smsOptOutAt: timestamp('sms_opt_out_at'),
+  intakeCompletedAt: timestamp('intake_completed_at'),
+  bookingInviteSentAt: timestamp('booking_invite_sent_at'),
+  goals: text('goals'),
 });
 
 export const pipelineEntries = pgTable('pipeline_entries', {
@@ -219,6 +231,9 @@ export const appointments = pgTable('appointments', {
   location: text('location'),
   status: appointmentStatusEnum('status').notNull().default('Scheduled'),
   notes: text('notes'),
+  source: varchar('source', { length: 30 }),
+  reminder24hSentAt: timestamp('reminder_24h_sent_at'),
+  reminder1hSentAt: timestamp('reminder_1h_sent_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

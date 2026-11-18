@@ -186,3 +186,38 @@ export async function cancelPendingEmails(contactId: number): Promise<number> {
 
   return result.length;
 }
+
+/**
+ * Send one email immediately (not via the template queue). Used for booking
+ * confirmations, which carry a calendar invite attachment.
+ * Returns false when email is not configured or the send fails.
+ */
+export async function sendDirectEmail(opts: {
+  to: string | string[];
+  subject: string;
+  html: string;
+  attachments?: { filename: string; content: string; contentType?: string }[];
+}): Promise<boolean> {
+  if (!resend) return false;
+  try {
+    const { error } = await resend.emails.send({
+      from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      attachments: opts.attachments?.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.content, 'utf8'),
+        contentType: a.contentType,
+      })),
+    });
+    if (error) {
+      console.error('Direct email error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Direct email error:', err);
+    return false;
+  }
+}

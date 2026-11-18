@@ -16,6 +16,7 @@ import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 import Users from '@/pages/Users';
 import WelcomeText from '@/pages/WelcomeText';
+import Booking from '@/pages/Booking';
 import Events from '@/pages/Events';
 import MarketingDashboard from '@/pages/marketing/Dashboard';
 import MarketingDistricts from '@/pages/marketing/Districts';
@@ -78,6 +79,14 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/users" element={<Users />} />
+          <Route
+            path="/booking"
+            element={
+              <AdminOnly>
+                <Booking />
+              </AdminOnly>
+            }
+          />
           <Route
             path="/welcome-text"
             element={
