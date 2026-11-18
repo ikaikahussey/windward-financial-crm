@@ -582,20 +582,23 @@ The app is also designed for Railway:
 
 #### Auto-deploy from GitHub
 
-`.github/workflows/deploy.yml` watches `main`, diffs the push, and runs
-`railway up` for whichever of `packages/{api,public,web}` changed. A change to
-the workflow file or root `package*.json` redeploys all three. Manual deploys
-are also available via the **Actions** tab → "Deploy to Railway" → Run workflow,
-with `service: api|public|web|all` and `action: up|redeploy|logs`.
+Deploys are handled by Railway's own GitHub integration, not a GitHub Action.
+Each service is connected to this repo in Railway (service → Settings → Source):
 
-Required GitHub secret: `RAILWAY_TOKEN` — an account token from
-[https://railway.com/account/tokens](https://railway.com/account/tokens). The
-project ID is hardcoded in the workflow (`RAILWAY_PROJECT_ID` env).
+| Service | Branch | Root directory |
+|---|---|---|
+| `api` | `main` | `packages/api` |
+| `web` (Admin CRM) | `main` | `packages/web` |
+
+A merge to `main` redeploys the services whose folder changed. The API runs
+database migrations on start. The public site is not deployed from this repo;
+it lives in `windward-financial-public` and is served by Netlify.
+
+For a manual deploy from a local machine, use `scripts/deploy.sh`.
 
 #### Required Railway environment variables
 
-Set these directly on each Railway service (Settings → Variables) — the
-workflow does not push them.
+Set these directly on each Railway service (Settings → Variables).
 
 **API service:**
 - `DATABASE_URL`, `SESSION_SECRET`, plus the SMTP / Quo / Anthropic vars from
